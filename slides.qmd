@@ -15,6 +15,12 @@ format:
       - \usepackage{booktabs}
 ---
 
+```{r}
+
+source('R/load_arabidopsis.R')
+
+```
+
 ## Outline
 
 1. Introduction & Data Description
@@ -28,9 +34,23 @@ format:
 
 ## Data Source
 
-- **Source:** TODO — describe where the data comes from
-- **Sample size:** $n = $ TODO
-- **Unit of observation:** TODO
+- **Source:** Our source dataset is called `Arabadopsis`, and was generated
+from a DoE experiment on Arabadopsis thaliana plants performed by the Center 
+for Genomics and Systems Biology at New York University, and the results 
+of which 
+were published in Banta JA, Stevens MHH, Pigliucci M (2010). “A comprehensive test
+of the ’limiting resources’ framework applied to plant tolerance to apical
+meristem damage.” Oikos, 119(2), 359-369. doi:10.1111/j.16000706.2009.17726.x.
+
+Banta et al investigated how different resources (nutrients, water, and light)
+affect the ability of Arabadopsis plants from 
+three different regions to tolerate damage to their apical 
+meristem (AMD) in order to test the "limiting resources" framework. The "limiting resources"  framework was an accepted model in the field, describing 
+the growth response of plants to AMD. The dataset contains measurements of plant growth and reproduction under various treatment conditions.
+
+- **Sample size:** $n = 625$
+
+- **Unit of observation:** individual plant
 
 ## Variables
 
@@ -44,11 +64,6 @@ format:
 : Variables used in the analysis
 
 ## Experimental Design
-
-<!-- If you designed the experiment, explain the design here. -->
-<!-- Otherwise, describe how the data were collected. -->
-
-- TODO — describe the study design or data collection process
 
 # Research Questions
 
