@@ -2,6 +2,17 @@
 
 This repo contains the STAT 642 project for Team 11 for the Spring 2026 semester.
 
+## Setup
+
+This project uses [`renv`](https://rstudio.github.io/renv/) to manage R package dependencies. To restore the environment:
+
+1. Install R (if not already installed).
+2. Open the project in RStudio or set your working directory to the project root.
+3. Install `renv` if you don't have it: `install.packages("renv")`
+4. Restore the project library: `renv::restore()`
+
+This will install all required packages at the versions recorded in `renv.lock`.
+
 ## Deliverables
 
 - Programs (written in SAS, R, or python) and data in a state such that

@@ -1,0 +1,140 @@
+---
+title: "YOUR TITLE HERE"
+subtitle: "STAT 642 — Spring 2026"
+author: "Team 11"
+date: "April 20, 2026"
+format:
+  beamer:
+    theme: "Madrid"
+    colortheme: "default"
+    fonttheme: "structurebold"
+    navigation: horizontal
+    aspectratio: 169
+    fontsize: 11pt
+    header-includes:
+      - \usepackage{booktabs}
+---
+
+## Outline
+
+1. Introduction & Data Description
+2. Research Questions
+3. Model Specification & Assumptions
+4. Analysis & Results
+5. Assumption Checks
+6. Conclusion
+
+# Introduction & Data Description
+
+## Data Source
+
+- **Source:** TODO — describe where the data comes from
+- **Sample size:** $n = $ TODO
+- **Unit of observation:** TODO
+
+## Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| $Y$      | Response (continuous) | TODO |
+| $X_1$    | Predictor | TODO |
+| $X_2$    | Predictor | TODO |
+| $X_3$    | Predictor | TODO |
+
+: Variables used in the analysis
+
+## Experimental Design
+
+<!-- If you designed the experiment, explain the design here. -->
+<!-- Otherwise, describe how the data were collected. -->
+
+- TODO — describe the study design or data collection process
+
+# Research Questions
+
+## What Is Interesting About These Data?
+
+- TODO — explain what makes this dataset interesting or relevant
+
+## Research Questions
+
+1. TODO — state your main research question(s)
+2. TODO
+3. TODO
+
+# Model Specification
+
+## Model
+
+$$
+Y_i = \beta_0 + \beta_1 X_{1i} + \beta_2 X_{2i} + \beta_3 X_{3i} + \varepsilon_i
+$$
+
+- $Y_i$: TODO — response variable
+- $\beta_0$: intercept
+- $\beta_1, \beta_2, \beta_3$: regression coefficients for predictors
+- $\varepsilon_i \overset{\text{iid}}{\sim} N(0, \sigma^2)$
+
+## Assumptions
+
+1. **Linearity** — the relationship between predictors and response is linear
+2. **Independence** — observations are independent
+3. **Normality** — errors are normally distributed
+4. **Equal Variance** — constant error variance (homoscedasticity)
+
+# Analysis & Results
+
+## Exploratory Data Analysis
+
+<!-- Include summary statistics, scatterplots, etc. -->
+
+TODO — insert EDA plots and tables
+
+## Model Fitting Results
+
+<!-- Paste or include model output here -->
+
+TODO — insert model summary output
+
+## Hypothesis Tests
+
+- **Overall F-test:** $H_0: \beta_1 = \beta_2 = \beta_3 = 0$
+  - $F = $ TODO, $p = $ TODO
+- **Individual t-tests:** TODO — report significant predictors
+
+## Significant Differences
+
+<!-- When H0 is rejected, clearly state which groups differ -->
+<!-- or how variables increase/decrease -->
+
+- TODO — describe the direction and magnitude of effects
+
+# Assumption Checks
+
+## Residual Plots
+
+<!-- Include residual vs. fitted, Q-Q plot, etc. -->
+
+TODO — insert residual diagnostic plots
+
+## Addressing Violations
+
+<!-- If assumptions are violated, explain remedial measures -->
+
+- TODO — describe any transformations, alternative methods, etc.
+
+# Conclusion
+
+## Summary of Findings
+
+- TODO — summarize the key results
+- TODO — answer the research questions posed earlier
+
+## Limitations & Future Work
+
+- TODO — note any limitations of the analysis
+- TODO — suggest directions for future investigation
+
+## References
+
+- TODO — cite data sources and methods as needed
