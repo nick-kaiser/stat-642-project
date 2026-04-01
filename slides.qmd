@@ -56,12 +56,13 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| $Y$      | Response (continuous) | TODO |
-| $X_1$    | Predictor | TODO |
-| $X_2$    | Predictor | TODO |
-| $X_3$    | Predictor | TODO |
-
-: Variables used in the analysis
+| $Y$      | Response (continuous) |
+| $Region$    | Predictor | TODO | The region from which the plant was collected (e.g., Northern Spain, Netherlands, South Sweden) |
+| $Population (Region)$    | Predictor | The population of the plant, nested within region
+| $Maternal Seed Family (Region, Population)$    | Predictor | The genetic lineage of the plant, nested within population and region |
+| $Nutrients$    | Predictor | The level of nutrients in the soil (e.g., low, medium, high) |
+| $Rack$    | Predictor | The individual light rack on which the plant was grown, included as a random effect to account for variability in light conditions across racks |
+| $Transplant$ | Predictor | The source of the plant (e.g. non-transplanted, transplanted from a pot, or transplanted from a petri dish)
 
 ## Experimental Design
 
