@@ -106,7 +106,27 @@ A total of 625 plants were analyzed in this experiment, with an average of
 
 ## What Is Interesting About These Data?
 
-- TODO — explain what makes this dataset interesting or relevant
+The response of plants to apical meristem damage (AMD) is of great interest to plant biologists, 
+as it can provide insights into the mechanisms of plant growth and development, as well as the 
+evolutionary strategies plants use to cope with damage. Apical meristem damage occurs primarily due 
+to plant eating animals, but can also occur due to environmental factors such as wind, hail, or 
+freezing temperatures. Understanding how plants respond to AMD can help the scientifific community 
+better understand plant resilience and adaptation to environmental stressors, for for this reason, 
+the topic is of great interest to plant biologists and ecologists.
+
+However, existing research on plant responses to AMD is somewhat conflicting, with some studies 
+reporting the counterintiutive finding that AMD can actualy increase plant fitness, while other 
+studies challenge this result. The "limiting resources model" is a widely accepted framework in the 
+field that describes how plants allocate resources to growth and reproduction in response to AMD. 
+However, there is still much debate about the specific mechanisms underlying plant responses to 
+AMD, and how different factors (such as nutrients, light, and genetic background) influence plant 
+tolerance to AMD.
+
+Banta et. al. propose that the LRM model is actually better thought of as an amalgam of multiple 
+underlying mechanistic models. To assess this hypothesis, they designed an impresively
+comprehensive experiment to test the predictions of the LRM model across a wide range of treatment 
+conditions. The dataset generated from this experiment provides a unique opportunity to analyze 
+plant responses to AMD in a rigorous and systematic way.
 
 ## Research Questions
 
