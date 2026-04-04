@@ -50,14 +50,19 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 
 - **Sample size:** $n = 625$
 
-- **Unit of observation:** individual plant
+- **Unit of observation:** 
+  - individual plants (basal infloresences, lateral branches, and fruits)
+  - indvidual plants and random samples of 5 fruits per plant (seeds)
 
 ## Variables
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| $Y$      | Response (continuous) |
-| $Region$    | Predictor | TODO | The region from which the plant was collected (e.g., Northern Spain, Netherlands, South Sweden) |
+| $Basal Infloresences$ | Response (integer) | The number of inflorescences growing out of the plant's rosette |
+| $Lateral Branches$ | Response (integer) | The number of lateral branches growing out of the plant's basal inflorescences |
+| $Fruits$ | Response (integer) | The number of fruits produced by the plant |
+| $Seeds$ | Response (integer) | The estimated number of viable seeds produced by the plant |
+| $Region$ | Predictor | TODO | The region from which the plant was collected (e.g., Northern Spain, Netherlands, South Sweden) |
 | $Population (Region)$    | Predictor | The population of the plant, nested within region
 | $Maternal Seed Family (Region, Population)$    | Predictor | The genetic lineage of the plant, nested within population and region |
 | $Nutrients$    | Predictor | The level of nutrients in the soil (e.g., low, medium, high) |
@@ -65,6 +70,37 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 | $Transplant$ | Predictor | The source of the plant (e.g. non-transplanted, transplanted from a pot, or transplanted from a petri dish)
 
 ## Experimental Design
+
+Maternal seed families of Arabidopsis thaliana were collected
+from populations in three different regions along a broad
+latitudinal gradient in western Europe during the spring of
+2001. In the laboratory, seeds were hydrated and prepared for germination in petri dishes. 
+Seeds were then planted in pots on one of two different high intensity light racks. In cases
+where seeds failed to germinate, they were replaced by a transplanted seedling of the same 
+maternal family sourced either from a pot with an extra germination or a seed germinated in 
+a petri dish. The light exposure and temperature schedule was matched to the natural 
+photoperiod and temperature gradient of the region from which the seeds were collected.
+
+Nutrients were added in the form of 14-14-14 nitrogen-phosphorus-potassium (N-P-K) fertilizer
+prills. All plants received one nutrient prill 11 days after planting, while plants in the 
+high nutrient group recieved an additinal 7 prills 23 days after planting. It was noted that 
+there was some variability in the size of the fertilizer prills, which likely contributed 
+to residual variance in the growth response of the plants.
+
+All plants were clipped to simulate apical meristem damage (AMD) at the time of plant bolting.
+Plants were all clipped at the same position with respect to the anatomy of the individual 
+plant. Plants were then analyzed for their growth response to AMD after their reproductive 
+period.
+
+A total of 625 plants were analyzed in this experiment, with an average of 
+6.5 plants for each seed family + treatment combination.
+
+- The experiment was a factorial design with the following factors:
+  - Region (3 levels: Northern Spain, Netherlands, Southern Sweden)
+  - Population (nested within Region, four populations from NS, two from NL, and three from SS)
+  - Maternal Seed Family (nested within Population and Region)
+  - Nutrients (3 levels: low, medium, high)
+  - Rack (random effect to account for variability in light conditions across racks)
 
 # Research Questions
 
