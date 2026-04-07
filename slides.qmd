@@ -114,25 +114,52 @@ freezing temperatures. Understanding how plants respond to AMD can help the scie
 better understand plant resilience and adaptation to environmental stressors, for for this reason, 
 the topic is of great interest to plant biologists and ecologists.
 
-However, existing research on plant responses to AMD is somewhat conflicting, with some studies 
-reporting the counterintiutive finding that AMD can actualy increase plant fitness, while other 
-studies challenge this result. The "limiting resources model" is a widely accepted framework in the 
-field that describes how plants allocate resources to growth and reproduction in response to AMD. 
-However, there is still much debate about the specific mechanisms underlying plant responses to 
-AMD, and how different factors (such as nutrients, light, and genetic background) influence plant 
-tolerance to AMD.
+However, existing research on plant responses to AMD was somewhat conflicting, with one group of 
+studies reporting that tolerance to AMD increased with nutrient availability, while another group 
+of studies reported the exact opposite. To address this gap, Wise and Abrahamson proposed the 
+"limiting resources model" (LRM), which posits that the growth response of plants to AMD is 
+determined by whether a "focal resource" (i.e. soil nutrients) or an "alternate resource" (i.e.
+shoot meristems) limits fitness. The LRM became a widely accepted framework within the field for 
+describing how plants allocate resources to growth and reproduction in response to
+AMD. However, there is still much debate about the specific mechanisms underlying plant responses
+to AMD, and how different factors (such as nutrients, light, and genetic background) influence
+plant tolerance to AMD. Some of the debate is enabled by the fact that the LRM framwork allows for 
+contrasting assumptions.
 
-Banta et. al. propose that the LRM model is actually better thought of as an amalgam of multiple 
+Banta et. al. propose that, given the tolerance for contrasting assumptions, the LRM model is
+actually better thought of as an amalgam of multiple 
 underlying mechanistic models. To assess this hypothesis, they designed an impresively
 comprehensive experiment to test the predictions of the LRM model across a wide range of treatment 
 conditions. The dataset generated from this experiment provides a unique opportunity to analyze 
-plant responses to AMD in a rigorous and systematic way.
+plant responses to AMD in a rigorous and systematic way. The dataset also enables Banta et al. to 
+methodically challenge each of the predictions of the LRM model within a single plant species, 
+enabling them to propose a revised, multi-model framework for understanding plant responses to AMD.
 
 ## Research Questions
 
-1. TODO — state your main research question(s)
-2. TODO
-3. TODO
+Banta et. al defined seven hypotheses based on the LRM model. These hypotheses are as follows:
+
+1. When nutrients are limiting fitness AND AMD primarily affects the use/aquisition of soil 
+nutrients, plants will have higher tolerance to AMD at high nutrient levels than at low nutrient levels
+2. When nutrients are limiting fitness AND AMD primarily affects the number of active shoot 
+meristems, AND the number of active shoot meristems is not limiting plant fitness at high nutrient
+levels, plants will have the same tolerance to AMD at high nutrient levels as at low nutrient levels
+3. When nutrients are limiting fitness AND AMD primarily affects the number of active shoot 
+meristems, AND the number of active shoot meristems is limiting plant fitness at high nutrient
+levels, AND AMD exacerbates the limitation of the number of active shoot meristems,
+plants will have lower tolerance to AMD at high nutrient levels than at low nutrient levels
+4. When nutrients are limiting fitness AND AMD primarily affects the number of active shoot 
+meristems, AND the number of active shoot meristems is limiting plant fitness at high nutrient
+levels, AND AMD eliminates/removes the limitation of the number of active shoot meristems,
+plants will have higher tolerance to AMD at high nutrient levels then at low nutrient levels
+5. When soil nutrients are not limiting fitness AND AMD primarily affects the use/aquisition of 
+soil nutrients, AND AMD causes soil nutrients to become limiting, plants will have higher tolerance 
+to AMD at high nutrient levels than at low nutrient levels
+6. When soil nutrients are not limiting fitness AND AMD primarily affects the use/aquisition of 
+soil nutrients, AND AMD does not cause soil nutrients to become limiting, plants will have the 
+same tolerance to AMD at high nutrient levels as at low nutrient levels
+7. When soil nutrients are not limiting fitness AND AMD primarily affects the number of active shoot
+meristems, plants will have the same tolerance to AMD at high nutrient levels as at low nutrient levels
 
 # Model Specification
 
