@@ -19,6 +19,9 @@ format:
 
 source('R/load_arabidopsis.R')
 
+library(dplyr)
+library(ggplot2)
+
 ```
 
 ## Outline
@@ -66,7 +69,7 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 | $Region$ | Predictor | TODO | The region from which the plant was collected (e.g., Northern Spain, Netherlands, South Sweden) |
 | $Population (Region)$    | Predictor | The population of the plant, nested within region
 | $Maternal Seed Family (Region, Population)$    | Predictor | The genetic lineage of the plant, nested within population and region |
-| $Nutrients$    | Predictor | The level of nutrients in the soil (e.g., low, medium, high) |
+| $Nutrients$    | Predictor | The level of nutrients in the soil (low or high) |
 | $Rack$    | Predictor | The individual light rack on which the plant was grown, included as a random effect to account for variability in light conditions across racks |
 | $Transplant$ | Predictor | The source of the plant (e.g. non-transplanted, transplanted from a pot, or transplanted from a petri dish)
 
@@ -100,7 +103,7 @@ A total of 625 plants were analyzed in this experiment, with an average of
   - Region (3 levels: Northern Spain, Netherlands, Southern Sweden)
   - Population (nested within Region, four populations from NS, two from NL, and three from SS)
   - Maternal Seed Family (nested within Population and Region)
-  - Nutrients (3 levels: low, medium, high)
+  - Nutrients (2 levels: low, high)
   - Rack (random effect to account for variability in light conditions across racks)
 
 # Research Questions
@@ -166,21 +169,48 @@ meristems, plants will have the same tolerance to AMD at high nutrient levels as
 
 ## Model
 
+We fit a linear mixed-effects model (LMM) for each response variable
+(transformed as needed). Count responses are log- or sqrt-transformed
+prior to fitting.
+
 $$
-Y_i = \beta_0 + \beta_1 X_{1i} + \beta_2 X_{2i} + \beta_3 X_{3i} + \varepsilon_i
+Y_{ijklmn} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{m(i)} + F_{n(mi)} + \varepsilon_{ijklmn}
 $$
 
-- $Y_i$: TODO — response variable
-- $\beta_0$: intercept
-- $\beta_1, \beta_2, \beta_3$: regression coefficients for predictors
-- $\varepsilon_i \overset{\text{iid}}{\sim} N(0, \sigma^2)$
+## Model — Parameter Definitions
+
+**Fixed effects:**
+
+- $\mu$: overall intercept
+- $\alpha_i$: effect of Region ($i = 1, 2, 3$; Northern Spain, Netherlands, Southern Sweden)
+- $\beta_j$: effect of Nutrients ($j = 1, 2$; low, high)
+- $\delta_l$: effect of Rack ($l = 1, 2$)
+- $(\alpha\beta)_{ij}$: Region $\times$ Nutrients interaction
+- $(\alpha\gamma)_{ik}$: Region $\times$ Transplant interaction
+- $(\beta\gamma)_{jk}$: Nutrients $\times$ Transplant interaction
+
+## Model — Random Effects
+
+**Random effects:**
+
+- $P_{m(i)} \sim N(0, \sigma^2_P)$: Population $m$ nested within Region $i$
+- $F_{n(mi)} \sim N(0, \sigma^2_F)$: Maternal Seed Family $n$ nested within Population and Region
+- $\varepsilon_{ijklmn} \sim N(0, \sigma^2)$: residual error
 
 ## Assumptions
 
-1. **Linearity** — the relationship between predictors and response is linear
-2. **Independence** — observations are independent
-3. **Normality** — errors are normally distributed
-4. **Equal Variance** — constant error variance (homoscedasticity)
+As this data will be analyzed as a linear mixed-effects model, the following assumptions must be met:
+
+1. **Linearity** — the relationship between predictors and each (transformed) response is linear
+2. **Independence** — observations are independent conditional on the random effects
+3. **Normality** — random effects and residual errors are normally distributed
+4. **Equal Variance** — constant residual variance (homoscedasticity)
+5. **Correct Model Specification** — the model includes all relevant predictors and interactions, and the random effects structure appropriately captures the nesting and variability in the data
+
+The following additional assumptions are made due to the experimental design:
+
+6. **Random Sampling within Strata** — within each region, populations and maternal seed families are assumed to be representative samples from the broader distribution of populations and families in that region, such that the random effects $P_{m(i)}$ and $F_{n(mi)}$ are exchangeable draws from their respective normal distributions
+7. **Exogeneity of Random Effects** — the random effects are uncorrelated with the fixed effects
 
 # Analysis & Results
 
