@@ -62,6 +62,7 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 | $Lateral Branches$ | Response (integer) | The number of lateral branches growing out of the plant's basal inflorescences |
 | $Fruits$ | Response (integer) | The number of fruits produced by the plant |
 | $Seeds$ | Response (integer) | The estimated number of viable seeds produced by the plant |
+| $Ripening Time$ | Response (continuous) | Time in days from bolting to fruit ripening |
 | $Region$ | Predictor | TODO | The region from which the plant was collected (e.g., Northern Spain, Netherlands, South Sweden) |
 | $Population (Region)$    | Predictor | The population of the plant, nested within region
 | $Maternal Seed Family (Region, Population)$    | Predictor | The genetic lineage of the plant, nested within population and region |
