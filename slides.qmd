@@ -192,30 +192,64 @@ reduced model.
 We use `lme4::lmer()` for model fitting and `lmerTest` for Satterthwaite
 denominator degrees of freedom in F-tests.
 
-## Model Fitting — Total Fruits
+## FUll Model Fitting
 
 ```{r}
 #| echo: false
-#| eval: false
 
-# TODO: uncomment and run once models are fit
-# library(lme4)
-# library(lmerTest)
-#
-# Arabidopsis$nutrient <- factor(Arabidopsis$nutrient)
-# Arabidopsis$rack <- factor(Arabidopsis$rack)
-# Arabidopsis$sqrt_fruits <- sqrt(Arabidopsis$total.fruits)
-#
-# fit_full <- lmer(
-#   sqrt_fruits ~ reg * nutrient + reg * status + nutrient * status +
-#     amd + rack + (1 | popu) + (1 | gen),
-#   data = Arabidopsis
-# )
-# summary(fit_full)
-# anova(fit_full, type = 3)
+library(lme4)
+library(lmerTest)
+
+Arabidopsis$nutrient <- factor(Arabidopsis$nutrient)
+Arabidopsis$rack <- factor(Arabidopsis$rack)
+Arabidopsis$sqrt_fruits <- sqrt(Arabidopsis$total.fruits)
+
+fit_full <- lmer(
+  sqrt_fruits ~ reg * nutrient + reg * status + nutrient * status +
+    amd + rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+summary(fit_full)
+anova(fit_full, type = 3)
 ```
 
-TODO — insert model summary and ANOVA output
+## Model Reduction
+
+```{r}
+#| echo: false
+
+# Backward elimination: drop non-significant interactions via LRT
+# Start by testing nutrient:status (highest p-value in full model ANOVA)
+fit_no_nut_status <- lmer(
+  sqrt_fruits ~ reg * nutrient + reg * status + amd + rack +
+    (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+
+# LRT comparing full vs reduced (must use ML, not REML)
+fit_full_ml <- update(fit_full, REML = FALSE)
+fit_no_nut_status_ml <- update(fit_no_nut_status, REML = FALSE)
+cat("=== LRT: drop Nutrients x Status ===\n")
+anova(fit_no_nut_status_ml, fit_full_ml)
+
+# nutrient:status is non-significant (p = 0.84), so drop it
+# Now test reg:status in the reduced model
+fit_no_reg_status <- lmer(
+  sqrt_fruits ~ reg * nutrient + status + amd + rack +
+    (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+fit_no_reg_status_ml <- update(fit_no_reg_status, REML = FALSE)
+cat("\n=== LRT: drop Region x Status ===\n")
+anova(fit_no_reg_status_ml, fit_no_nut_status_ml)
+
+# Use the reduced model (without nutrient:status) refit with REML
+fit_reduced <- fit_no_nut_status
+cat("\n=== Reduced Model Summary ===\n")
+summary(fit_reduced)
+cat("\n=== Reduced Model ANOVA ===\n")
+anova(fit_reduced, type = 3)
+```
 
 ## Hypothesis Tests — Type III F-tests
 
@@ -243,16 +277,12 @@ the direction of the effect.
 
 ```{r}
 #| echo: false
-#| eval: false
 
-# TODO: uncomment and run once models are fit
-# library(emmeans)
-# emmeans(fit_full, pairwise ~ nutrient | reg)
-# emmeans(fit_full, pairwise ~ status | reg)
-# emmeans(fit_full, pairwise ~ amd)
+library(emmeans)
+emmeans(fit_reduced, pairwise ~ nutrient | reg)
+emmeans(fit_reduced, pairwise ~ status | reg)
+emmeans(fit_reduced, pairwise ~ amd)
 ```
-
-TODO — report pairwise comparisons and direction of effects
 
 # Assumption Checks
 
