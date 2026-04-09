@@ -53,25 +53,20 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 
 - **Sample size:** $n = 625$
 
-- **Unit of observation:** 
-  - individual plants (basal infloresences, lateral branches, and fruits)
-  - indvidual plants and random samples of 5 fruits per plant (seeds)
+- **Unit of observation:** individual plants
 
 ## Variables
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| $Basal Infloresences$ | Response (integer) | The number of inflorescences growing out of the plant's rosette |
-| $Lateral Branches$ | Response (integer) | The number of lateral branches growing out of the plant's basal inflorescences |
-| $Fruits$ | Response (integer) | The number of fruits produced by the plant |
-| $Seeds$ | Response (integer) | The estimated number of viable seeds produced by the plant |
-| $Ripening Time$ | Response (continuous) | Time in days from bolting to fruit ripening |
-| $Region$ | Predictor | TODO | The region from which the plant was collected (e.g., Northern Spain, Netherlands, South Sweden) |
-| $Population (Region)$    | Predictor | The population of the plant, nested within region
-| $Maternal Seed Family (Region, Population)$    | Predictor | The genetic lineage of the plant, nested within population and region |
-| $Nutrients$    | Predictor | The level of nutrients in the soil (low or high) |
-| $Rack$    | Predictor | The individual light rack on which the plant was grown, included as a random effect to account for variability in light conditions across racks |
-| $Transplant$ | Predictor | The source of the plant (e.g. non-transplanted, transplanted from a pot, or transplanted from a petri dish)
+| Total Fruits | Response (integer) | The total number of fruits produced by the plant |
+| Region | Fixed predictor | The region from which the plant was collected (NL, SP, SW) |
+| Nutrients | Fixed predictor | The level of nutrients in the soil (1 prill = low, 8 prills = high) |
+| AMD | Fixed predictor | Whether the plant was clipped to simulate apical meristem damage (clipped or unclipped) |
+| Status | Fixed predictor | The source of the plant (Normal, Petri.Plate, or Transplant) |
+| Rack | Fixed predictor | The light rack on which the plant was grown (1 or 2) |
+| Population | Random grouping | The population of the plant, nested within Region (9 populations) |
+| Genotype | Random grouping | The maternal seed family, nested within Population (24 families) |
 
 ## Experimental Design
 
@@ -91,10 +86,10 @@ high nutrient group recieved an additinal 7 prills 23 days after planting. It wa
 there was some variability in the size of the fertilizer prills, which likely contributed 
 to residual variance in the growth response of the plants.
 
-All plants were clipped to simulate apical meristem damage (AMD) at the time of plant bolting.
-Plants were all clipped at the same position with respect to the anatomy of the individual 
-plant. Plants were then analyzed for their growth response to AMD after their reproductive 
-period.
+At the time of plant bolting, plants were either clipped to simulate apical meristem damage
+(AMD) or left unclipped as a control. Clipped plants were all clipped at the same position
+with respect to the anatomy of the individual plant. Plants were then analyzed for their
+growth response after their reproductive period.
 
 A total of 625 plants were analyzed in this experiment, with an average of 
 6.5 plants for each seed family + treatment combination.
@@ -104,7 +99,8 @@ A total of 625 plants were analyzed in this experiment, with an average of
   - Population (nested within Region, four populations from NS, two from NL, and three from SS)
   - Maternal Seed Family (nested within Population and Region)
   - Nutrients (2 levels: low, high)
-  - Rack (random effect to account for variability in light conditions across racks)
+  - AMD (2 levels: clipped, unclipped)
+  - Rack (2 levels, fixed effect to account for light environment)
 
 # Research Questions
 
@@ -115,66 +111,36 @@ as it can provide insights into the mechanisms of plant growth and development, 
 evolutionary strategies plants use to cope with damage. Apical meristem damage occurs primarily due 
 to plant eating animals, but can also occur due to environmental factors such as wind, hail, or 
 freezing temperatures. Understanding how plants respond to AMD can help the scientifific community 
-better understand plant resilience and adaptation to environmental stressors, for for this reason, 
-the topic is of great interest to plant biologists and ecologists.
-
-However, existing research on plant responses to AMD was somewhat conflicting, with one group of 
-studies reporting that tolerance to AMD increased with nutrient availability, while another group 
-of studies reported the exact opposite. To address this gap, Wise and Abrahamson proposed the 
-"limiting resources model" (LRM), which posits that the growth response of plants to AMD is 
-determined by whether a "focal resource" (i.e. soil nutrients) or an "alternate resource" (i.e.
-shoot meristems) limits fitness. The LRM became a widely accepted framework within the field for 
-describing how plants allocate resources to growth and reproduction in response to
-AMD. However, there is still much debate about the specific mechanisms underlying plant responses
-to AMD, and how different factors (such as nutrients, light, and genetic background) influence
-plant tolerance to AMD. Some of the debate is enabled by the fact that the LRM framwork allows for 
-contrasting assumptions.
-
-Banta et. al. propose that, given the tolerance for contrasting assumptions, the LRM model is
-actually better thought of as an amalgam of multiple 
-underlying mechanistic models. To assess this hypothesis, they designed an impresively
-comprehensive experiment to test the predictions of the LRM model across a wide range of treatment 
-conditions. The dataset generated from this experiment provides a unique opportunity to analyze 
-plant responses to AMD in a rigorous and systematic way. The dataset also enables Banta et al. to 
-methodically challenge each of the predictions of the LRM model within a single plant species, 
-enabling them to propose a revised, multi-model framework for understanding plant responses to AMD.
+better understand plant resilience and adaptation to environmental stressors, and for this reason, 
+the topic is of great interest to plant biologists and ecologists. However, existing research on plant
+responses to AMD was somewhat conflicting, with one group of studies reporting that tolerance to AMD
+increased with nutrient availability, while another group of studies reported the exact opposite. This 
+dataset represents a unique opportunity to systematically investigate the factors that influence plant 
+response to AMD and provide more definitive conclusions on the relationship between nutrient 
+availability and plant tolerance to AMD.
 
 ## Research Questions
 
-Banta et. al defined seven hypotheses based on the LRM model. These hypotheses are as follows:
+Our research questions in analyzing this dataset are as follows:
 
-1. When nutrients are limiting fitness AND AMD primarily affects the use/aquisition of soil 
-nutrients, plants will have higher tolerance to AMD at high nutrient levels than at low nutrient levels
-2. When nutrients are limiting fitness AND AMD primarily affects the number of active shoot 
-meristems, AND the number of active shoot meristems is not limiting plant fitness at high nutrient
-levels, plants will have the same tolerance to AMD at high nutrient levels as at low nutrient levels
-3. When nutrients are limiting fitness AND AMD primarily affects the number of active shoot 
-meristems, AND the number of active shoot meristems is limiting plant fitness at high nutrient
-levels, AND AMD exacerbates the limitation of the number of active shoot meristems,
-plants will have lower tolerance to AMD at high nutrient levels than at low nutrient levels
-4. When nutrients are limiting fitness AND AMD primarily affects the number of active shoot 
-meristems, AND the number of active shoot meristems is limiting plant fitness at high nutrient
-levels, AND AMD eliminates/removes the limitation of the number of active shoot meristems,
-plants will have higher tolerance to AMD at high nutrient levels then at low nutrient levels
-5. When soil nutrients are not limiting fitness AND AMD primarily affects the use/aquisition of 
-soil nutrients, AND AMD causes soil nutrients to become limiting, plants will have higher tolerance 
-to AMD at high nutrient levels than at low nutrient levels
-6. When soil nutrients are not limiting fitness AND AMD primarily affects the use/aquisition of 
-soil nutrients, AND AMD does not cause soil nutrients to become limiting, plants will have the 
-same tolerance to AMD at high nutrient levels as at low nutrient levels
-7. When soil nutrients are not limiting fitness AND AMD primarily affects the number of active shoot
-meristems, plants will have the same tolerance to AMD at high nutrient levels as at low nutrient levels
+1. How do the growth and reproductive responses of Arabidopsis thaliana to apical meristem damage (AMD) 
+vary across different regions, nutrient levels, and transplant sources?
+
+2. Are there significant interactions between region, nutrient levels, and transplant sources in 
+determining the plant's response to AMD?
+
+3. How much of the variability in plant response to AMD can be attributed to differences between 
+populations and maternal seed families within regions?
 
 # Model Specification
 
 ## Model
 
-We fit a linear mixed-effects model (LMM) for each response variable
-(transformed as needed). Count responses are log- or sqrt-transformed
-prior to fitting.
+We fit a linear mixed-effects model (LMM) with total fruits
+(sqrt-transformed) as the response.
 
 $$
-Y_{ijklmn} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{m(i)} + F_{n(mi)} + \varepsilon_{ijklmn}
+Y_{ijklmno} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
 $$
 
 ## Model — Parameter Definitions
@@ -182,20 +148,22 @@ $$
 **Fixed effects:**
 
 - $\mu$: overall intercept
-- $\alpha_i$: effect of Region ($i = 1, 2, 3$; Northern Spain, Netherlands, Southern Sweden)
+- $\alpha_i$: effect of Region ($i = 1, 2, 3$; NL, SP, SW)
 - $\beta_j$: effect of Nutrients ($j = 1, 2$; low, high)
+- $\gamma_k$: effect of Status/Transplant ($k = 1, 2, 3$; Normal, Petri.Plate, Transplant)
 - $\delta_l$: effect of Rack ($l = 1, 2$)
+- $\phi_m$: effect of AMD ($m = 1, 2$; clipped, unclipped)
 - $(\alpha\beta)_{ij}$: Region $\times$ Nutrients interaction
-- $(\alpha\gamma)_{ik}$: Region $\times$ Transplant interaction
-- $(\beta\gamma)_{jk}$: Nutrients $\times$ Transplant interaction
+- $(\alpha\gamma)_{ik}$: Region $\times$ Status interaction
+- $(\beta\gamma)_{jk}$: Nutrients $\times$ Status interaction
 
 ## Model — Random Effects
 
 **Random effects:**
 
-- $P_{m(i)} \sim N(0, \sigma^2_P)$: Population $m$ nested within Region $i$
-- $F_{n(mi)} \sim N(0, \sigma^2_F)$: Maternal Seed Family $n$ nested within Population and Region
-- $\varepsilon_{ijklmn} \sim N(0, \sigma^2)$: residual error
+- $P_{n(i)} \sim N(0, \sigma^2_P)$: Population $n$ nested within Region $i$
+- $F_{o(ni)} \sim N(0, \sigma^2_F)$: Maternal Seed Family $o$ nested within Population and Region
+- $\varepsilon_{ijklmno} \sim N(0, \sigma^2)$: residual error
 
 ## Assumptions
 
@@ -209,35 +177,82 @@ As this data will be analyzed as a linear mixed-effects model, the following ass
 
 The following additional assumptions are made due to the experimental design:
 
-6. **Random Sampling within Strata** — within each region, populations and maternal seed families are assumed to be representative samples from the broader distribution of populations and families in that region, such that the random effects $P_{m(i)}$ and $F_{n(mi)}$ are exchangeable draws from their respective normal distributions
+6. **Random Sampling within Strata** — within each region, populations and maternal seed families are assumed to be representative samples from the broader distribution of populations and families in that region, such that the random effects $P_{n(i)}$ and $F_{o(ni)}$ are exchangeable draws from their respective normal distributions
 7. **Exogeneity of Random Effects** — the random effects are uncorrelated with the fixed effects
 
 # Analysis & Results
 
-## Exploratory Data Analysis
+## Model Fitting — Overview
 
-<!-- Include summary statistics, scatterplots, etc. -->
+We fit the full LMM with all two-way interactions among Region, Nutrients,
+and Status, then perform backward elimination of non-significant
+interactions using likelihood ratio tests ($\alpha = 0.05$) to arrive at a
+reduced model.
 
-TODO — insert EDA plots and tables
+We use `lme4::lmer()` for model fitting and `lmerTest` for Satterthwaite
+denominator degrees of freedom in F-tests.
 
-## Model Fitting Results
+## Model Fitting — Total Fruits
 
-<!-- Paste or include model output here -->
+```{r}
+#| echo: false
+#| eval: false
 
-TODO — insert model summary output
+# TODO: uncomment and run once models are fit
+# library(lme4)
+# library(lmerTest)
+#
+# Arabidopsis$nutrient <- factor(Arabidopsis$nutrient)
+# Arabidopsis$rack <- factor(Arabidopsis$rack)
+# Arabidopsis$sqrt_fruits <- sqrt(Arabidopsis$total.fruits)
+#
+# fit_full <- lmer(
+#   sqrt_fruits ~ reg * nutrient + reg * status + nutrient * status +
+#     amd + rack + (1 | popu) + (1 | gen),
+#   data = Arabidopsis
+# )
+# summary(fit_full)
+# anova(fit_full, type = 3)
+```
 
-## Hypothesis Tests
+TODO — insert model summary and ANOVA output
 
-- **Overall F-test:** $H_0: \beta_1 = \beta_2 = \beta_3 = 0$
-  - $F = $ TODO, $p = $ TODO
-- **Individual t-tests:** TODO — report significant predictors
+## Hypothesis Tests — Type III F-tests
+
+We test the significance of fixed effects using Type III F-tests
+with Satterthwaite degrees of freedom.
+
+| Effect | $F$ | df$_1$ | df$_2$ | $p$-value |
+|--------|-----|--------|--------|-----------|
+| Region | TODO | TODO | TODO | TODO |
+| Nutrients | TODO | TODO | TODO | TODO |
+| Status | TODO | TODO | TODO | TODO |
+| AMD | TODO | TODO | TODO | TODO |
+| Rack | TODO | TODO | TODO | TODO |
+| Region $\times$ Nutrients | TODO | TODO | TODO | TODO |
+| Region $\times$ Status | TODO | TODO | TODO | TODO |
+| Nutrients $\times$ Status | TODO | TODO | TODO | TODO |
+
+: Type III F-test results for $\sqrt{\text{Total Fruits}}$
 
 ## Significant Differences
 
-<!-- When H0 is rejected, clearly state which groups differ -->
-<!-- or how variables increase/decrease -->
+When the null hypothesis is rejected for a fixed effect, we examine
+estimated marginal means (EMMs) to determine which groups differ and
+the direction of the effect.
 
-- TODO — describe the direction and magnitude of effects
+```{r}
+#| echo: false
+#| eval: false
+
+# TODO: uncomment and run once models are fit
+# library(emmeans)
+# emmeans(fit_full, pairwise ~ nutrient | reg)
+# emmeans(fit_full, pairwise ~ status | reg)
+# emmeans(fit_full, pairwise ~ amd)
+```
+
+TODO — report pairwise comparisons and direction of effects
 
 # Assumption Checks
 
