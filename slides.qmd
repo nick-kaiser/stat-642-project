@@ -192,7 +192,7 @@ reduced model.
 We use `lme4::lmer()` for model fitting and `lmerTest` for Satterthwaite
 denominator degrees of freedom in F-tests.
 
-## FUll Model Fitting
+## Full Model Fitting
 
 ```{r}
 #| echo: false
