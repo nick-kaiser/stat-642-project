@@ -288,8 +288,6 @@ emmeans(fit_reduced, pairwise ~ amd)
 
 ## Residual Plots
 
-<!-- Include residual vs. fitted, Q-Q plot, etc. -->
-
 ```{r}
 #| echo: false
 
@@ -308,8 +306,8 @@ lattice::qqmath(fit_reduced, main = "Normal Q-Q plot")
 scale_loc_plot = function(m, line.col = "red", line.lty = 1, line.lwd = 2) {
   plot(fit_reduced, sqrt(abs(resid(.))) ~ fitted(.), 
        type = c("p", "smooth"), 
-       xlab = "Sqrt(Standardized residuals)",
-       ylab = "Fitted values",
+       xlab = "Fitted values",
+       ylab = "Sqrt(Standardized residuals)",
        main = "Scale-Location Plot",
        par.settings = list(plot.line = 
                              list(alpha = 1, 
