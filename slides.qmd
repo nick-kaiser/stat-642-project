@@ -1,5 +1,5 @@
 ---
-title: "YOUR TITLE HERE"
+title: "Arabidopsis Growth Under Nutrients and Damage"
 subtitle: "STAT 642 — Spring 2026"
 author: "Team 11"
 date: "April 20, 2026"
@@ -578,18 +578,48 @@ emmeans(fit_reduced, pairwise ~ status | reg)
 emmeans(fit_reduced, pairwise ~ amd)
 ```
 
-# Conclusion
+# Summary of Findings
 
-## Summary of Findings
+- **Nutrient availability was the strongest fixed effect** in the model. Plants grown under high nutrients produced significantly more fruits than those under low nutrients.
 
-- TODO — summarize the key results
-- TODO — answer the research questions posed earlier
+- **Apical meristem damage (AMD) had a significant negative effect** on reproduction. Unclipped plants produced more fruits on average than clipped plants.
 
-## Limitations & Future Work
+- **Rack was also a significant predictor**, indicating that growth conditions associated with rack placement contributed meaningfully to fruit production.
 
-- TODO — note any limitations of the analysis
-- TODO — suggest directions for future investigation
+- **Region alone was not significant**, but its role became important through interactions with other predictors.
 
-## References
+# Summary of Findings
 
-- TODO — cite data sources and methods as needed
+- The **Region × Nutrient interaction was significant**, showing that the effect of nutrient availability differed across regions.
+
+- The **Region × Status interaction was also significant**, indicating that transplant or source effects were not consistent across regions.
+
+- The random effects for **population** and **genotype** captured additional biological variability, supporting the use of a mixed-effects model.
+
+- Overall, fruit production in *Arabidopsis* was shaped by both **experimental treatments** and **hierarchical biological differences** among populations and maternal seed families.
+
+# Limitations \& Future Work
+
+- Residual diagnostics suggested **some heteroscedasticity across regions and status groups**, although the variance differences were not extreme.
+
+- Because the response variable is a **count with many zeros**, transformation-based Gaussian modeling may not fully capture the data structure.
+
+- While the linear mixed-effects model was interpretable and supported the main conclusions, future work should further investigate **generalized mixed models for count outcomes**.
+
+- Additional analyses could explore **interactions involving AMD**, assess alternative variance structures, and use expanded data to better understand variation across populations and genotypes.
+
+# References
+
+- Banta, J. A., Stevens, M. H. H., & Pigliucci, M. (2010).  
+  *A comprehensive test of the “limiting resources” framework applied to plant tolerance to apical meristem damage*.  
+  Oikos, 119(2), 359–369.
+
+
+- Dean, A., Voss, D., & Draguljić, D. (2017).  
+  *Design and Analysis of Experiments* (2nd ed.). Springer.
+
+
+- STAT 642 Course Handouts, including:
+  - Handout 6: Random Effects Models
+  - Handout 9: Mixed Models and Variance Components
+  - Handout 10: Model Construction and Inference
