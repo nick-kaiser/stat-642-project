@@ -356,6 +356,55 @@ aic_bic <- aic_bic[order(aic_bic$AIC), ]
 knitr::kable(aic_bic, digits = 2, row.names = FALSE)
 ```
 
+## Alternative GLMM with Negative Binomial Family
+
+Given that the response is a count variable with many zeros and the heteroscedasticity 
+across some variables, we also fit a generalized linear mixed model (GLMM) with a negative 
+binomial family to see if it provides a better fit to the data.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(glmmTMB)
+library(DHARMa)
+
+# Fit the same reduced structure as fit_reduced, but with a negative
+# binomial response on the original count scale (no log1p transform).
+fit_nb <- glmmTMB(
+  total.fruits ~ reg * nutrient + reg * status + amd + rack +
+    (1 | popu) + (1 | gen),
+  data = Arabidopsis,
+  family = nbinom2
+)
+
+cat("=== Negative Binomial GLMM Summary ===\n")
+summary(fit_nb)
+
+cat("\n=== Type III Wald Chi-square tests ===\n")
+car::Anova(fit_nb, type = 3)
+
+# Compare Gaussian LMM on log1p scale vs NB GLMM on count scale via AIC.
+# Note: AICs are only directly comparable because glmmTMB reports AIC on
+# the original response scale. Use with caution.
+cat("\n=== AIC comparison ===\n")
+data.frame(
+  Model = c("Gaussian LMM (log1p)", "Negative Binomial GLMM"),
+  AIC   = c(AIC(fit_reduced), AIC(fit_nb))
+)
+
+
+jacobian_correction <- 2 * sum(log(Arabidopsis$total.fruits + 1))
+aic_lmm_adjusted <- AIC(fit_reduced) + jacobian_correction
+aic_lmm_adjusted
+AIC(fit_nb)
+
+plot(simulateResiduals(fit_nb))
+```
+
+
+
 # Assumption Checks
 
 ## Residual Plots
@@ -434,6 +483,8 @@ tapply(resid(fit_reduced), Arabidopsis$reg, var)
 tapply(resid(fit_reduced), Arabidopsis$status, var)
 
 ```
+
+Given the large sample size (n = 625), the BFL test becomes sensitive to relatively small differences in variance across groups, which may not be practically significant.
 
 Reviewing the variance estimates more closely across these two groups, we see that the 
 ratio of largest to smallest variance across regions is `r max(tapply(resid(fit_reduced), Arabidopsis$reg, var)) / min(tapply(resid(fit_reduced), Arabidopsis$reg, var))`, and the ratio of largest to smallest variance across status groups is `r max(tapply(resid(fit_reduced), Arabidopsis$status, var)) / min(tapply(resid(fit_reduced), Arabidopsis$status, var))`. While there is some evidence of heteroscedasticity across these groups, the magnitude of the variance differences is not extreme (less than 3-fold difference in variance across groups, 
