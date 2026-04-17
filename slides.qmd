@@ -10,7 +10,7 @@ format:
     fonttheme: "structurebold"
     navigation: horizontal
     aspectratio: 169
-    fontsize: 11pt
+    fontsize: 10pt
     header-includes:
       - \usepackage{booktabs}
 ---
@@ -21,10 +21,14 @@ source('R/load_arabidopsis.R')
 
 library(dplyr)
 library(ggplot2)
+library(MASS)
+library(car)
+library(ggplot2)
+library(dplyr)
 
 ```
 
-## Outline
+# Outline
 
 1. Introduction & Data Description
 2. Research Questions
@@ -35,9 +39,7 @@ library(ggplot2)
 
 # Introduction & Data Description
 
-## Data Source
-
-- **Source:** Our source dataset is called `Arabadopsis`, and was generated
+**Source:** Our source dataset is called `Arabadopsis`, and was generated
 from a DoE experiment on Arabadopsis thaliana plants performed by the Center 
 for Genomics and Systems Biology at New York University, and the results 
 of which 
@@ -51,12 +53,12 @@ three different regions to tolerate damage to their apical
 meristem (AMD) in order to test the "limiting resources" framework. The "limiting resources"  framework was an accepted model in the field, describing 
 the growth response of plants to AMD. The dataset contains measurements of plant growth and reproduction under various treatment conditions.
 
-- **Sample size:** $n = 625$
+**Sample size:** $n = 625$
 
-- **Unit of observation:** individual plants
+**Unit of observation:** individual plants
 
-## Variables
-
+# Variables
+\small
 | Variable | Type | Description |
 |----------|------|-------------|
 | Total Fruits | Response (integer) | The total number of fruits produced by the plant |
@@ -68,58 +70,39 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 | Population | Random grouping | The population of the plant, nested within Region (9 populations) |
 | Genotype | Random grouping | The maternal seed family, nested within Population (24 families) |
 
-## Experimental Design
+# Experimental Design
 
-Maternal seed families of Arabidopsis thaliana were collected
-from populations in three different regions along a broad
-latitudinal gradient in western Europe during the spring of
-2001. In the laboratory, seeds were hydrated and prepared for germination in petri dishes. 
-Seeds were then planted in pots on one of two different high intensity light racks. In cases
-where seeds failed to germinate, they were replaced by a transplanted seedling of the same 
-maternal family sourced either from a pot with an extra germination or a seed germinated in 
-a petri dish. The light exposure and temperature schedule was matched to the natural 
-photoperiod and temperature gradient of the region from which the seeds were collected.
+- **Study organism:** *Arabidopsis thaliana*
+- **Sampling structure:** maternal seed families collected from populations in **3 regions** (Northern Spain, Netherlands, Southern Sweden)
+- **Hierarchical structure:**
+  - Region
+  - Population nested within Region (four populations from NS, two from NL, and three from SS)
+  - Genotype (maternal seed family) nested within Population
 
-Nutrients were added in the form of 14-14-14 nitrogen-phosphorus-potassium (N-P-K) fertilizer
-prills. All plants received one nutrient prill 11 days after planting, while plants in the 
-high nutrient group recieved an additinal 7 prills 23 days after planting. It was noted that 
-there was some variability in the size of the fertilizer prills, which likely contributed 
-to residual variance in the growth response of the plants.
+- **Treatment factors:**
+  - **Nutrients:** low (1 prill) vs high (8 prills)
+  - **AMD:** clipped vs unclipped
+  - **Rack:** 2 light racks
+  - **Status:** Normal, Petri Plate, Transplant
 
-At the time of plant bolting, plants were either clipped to simulate apical meristem damage
-(AMD) or left unclipped as a control. Clipped plants were all clipped at the same position
-with respect to the anatomy of the individual plant. Plants were then analyzed for their
-growth response after their reproductive period.
+- **Experimental details:**
+  - Seeds germinated in petri dishes, then planted in pots
+  - Failed germinations sometimes replaced by seedlings of the same maternal family
+  - Clipping applied at bolting stage to simulate apical meristem damage
 
-A total of 625 plants were analyzed in this experiment, with an average of 
-6.5 plants for each seed family + treatment combination.
+- **Sample size:** \(n = 625\)
+- **Average replication:** about 6.5 plants per seed-family-by-treatment combination
 
-- The experiment was a factorial design with the following factors:
-  - Region (3 levels: Northern Spain, Netherlands, Southern Sweden)
-  - Population (nested within Region, four populations from NS, two from NL, and three from SS)
-  - Maternal Seed Family (nested within Population and Region)
-  - Nutrients (2 levels: low, high)
-  - AMD (2 levels: clipped, unclipped)
-  - Rack (2 levels, fixed effect to account for light environment)
+# What Is Interesting About These Data?
 
-# Research Questions
+- Plant response to **apical meristem damage (AMD)** reflects growth, survival, and adaptation
+- AMD occurs due to **herbivory and environmental stress**
+- Prior research shows **conflicting results**:
+  - Some: higher nutrients → higher tolerance  
+  - Others: higher nutrients → lower tolerance
+- This dataset allows a **controlled test** of how nutrients affect plant response to damage
 
-## What Is Interesting About These Data?
-
-The response of plants to apical meristem damage (AMD) is of great interest to plant biologists, 
-as it can provide insights into the mechanisms of plant growth and development, as well as the 
-evolutionary strategies plants use to cope with damage. Apical meristem damage occurs primarily due 
-to plant eating animals, but can also occur due to environmental factors such as wind, hail, or 
-freezing temperatures. Understanding how plants respond to AMD can help the scientifific community 
-better understand plant resilience and adaptation to environmental stressors, and for this reason, 
-the topic is of great interest to plant biologists and ecologists. However, existing research on plant
-responses to AMD was somewhat conflicting, with one group of studies reporting that tolerance to AMD
-increased with nutrient availability, while another group of studies reported the exact opposite. This 
-dataset represents a unique opportunity to systematically investigate the factors that influence plant 
-response to AMD and provide more definitive conclusions on the relationship between nutrient 
-availability and plant tolerance to AMD.
-
-## Research Questions
+**Research Questions**
 
 Our research questions in analyzing this dataset are as follows:
 
@@ -132,18 +115,32 @@ determining the plant's response to AMD?
 3. How much of the variability in plant response to AMD can be attributed to differences between 
 populations and maternal seed families within regions?
 
-# Model Specification
+# Model: Why a Mixed-Effects Model?
 
-## Model
+A mixed-effects model is appropriate because the data have a
+**hierarchical structure**:
+
+- Plants are grouped within **genotypes**
+- Genotypes are grouped within **populations**
+- Populations are grouped within **regions**
 
 We fit a linear mixed-effects model (LMM) with total fruits
 (sqrt-transformed) as the response.
-
 $$
 Y_{ijklmno} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
 $$
 
-## Model — Parameter Definitions
+Fixed effects:
+
+- Region, Nutrients, Status, Rack, AMD
+
+- Region × Nutrients
+
+- Region × Status
+
+- Nutrients × Status
+
+# Model: Parameter Definitions
 
 **Fixed effects:**
 
@@ -157,15 +154,13 @@ $$
 - $(\alpha\gamma)_{ik}$: Region $\times$ Status interaction
 - $(\beta\gamma)_{jk}$: Nutrients $\times$ Status interaction
 
-## Model — Random Effects
-
 **Random effects:**
 
 - $P_{n(i)} \sim N(0, \sigma^2_P)$: Population $n$ nested within Region $i$
 - $F_{o(ni)} \sim N(0, \sigma^2_F)$: Maternal Seed Family $o$ nested within Population and Region
 - $\varepsilon_{ijklmno} \sim N(0, \sigma^2)$: residual error
 
-## Assumptions
+# Assumptions
 
 As this data will be analyzed as a linear mixed-effects model, the following assumptions must be met:
 
@@ -180,13 +175,14 @@ The following additional assumptions are made due to the experimental design:
 6. **Random Sampling within Strata** — within each region, populations and maternal seed families are assumed to be representative samples from the broader distribution of populations and families in that region, such that the random effects $P_{n(i)}$ and $F_{o(ni)}$ are exchangeable draws from their respective normal distributions
 7. **Exogeneity of Random Effects** — the random effects are uncorrelated with the fixed effects
 
-# Analysis & Results
-
-## Data Exploration
+# Data Exploration & Results
 
 Before fitting the model, we perform exploratory data analysis to understand the distribution of the response variable and the relationships between predictors and the response.
 
-```{r}
+::: columns
+
+::: column
+```{r, fig.width=4.5, fig.height=3.2, out.width='100%'}
 
 # Distribution of total fruits
 ggplot(Arabidopsis, aes(x = total.fruits)) +
@@ -194,16 +190,21 @@ ggplot(Arabidopsis, aes(x = total.fruits)) +
   labs(title = "Distribution of Total Fruits", x = "Total Fruits", y = "Count") +
   theme_minimal()
 
+```
+:::
+
+::: column
+```{r, fig.width=4.5, fig.height=3.2, out.width='100%'}
 # Distribution of total fruits where total.fruits < 10
 
 ggplot(Arabidopsis %>% filter(total.fruits < 10), aes(x = total.fruits)) +
   geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
   labs(title = "Distribution of Total Fruits (Zoomed In)", x = "Total Fruits", y = "Count") +
   theme_minimal()
-
 ```
-
-## Model Fitting — Overview
+:::
+:::
+# Model Fitting — Overview
 
 We fit the full LMM with all two-way interactions among Region, Nutrients,
 and Status, then perform backward elimination of non-significant
@@ -213,9 +214,7 @@ reduced model.
 We use `lme4::lmer()` for model fitting and `lmerTest` for Satterthwaite
 denominator degrees of freedom in F-tests.
 
-## Full Model Fitting
-
-### Box-Cox for full model
+**Full Model Fitting: Box-Cox for full model**
 
 As a first step for model fitting, we check the distribution of the response 
 variable and consider which transformation might be appropriate in 
@@ -223,21 +222,16 @@ order to satisfy model assumptions (namely normality and homoscedasticity).
 We apply the Box-Cox transformation to the response variable (total fruits) and 
 assess the suggested lambda values to determine an appropriate transformation. 
 
-```{r}
-
-library(MASS)
-
-# An offset of 1 is added to total fruits to handle zero counts
+```{r, fig.width=4.5, fig.height=3.0, out.width='85%', echo=FALSE, message=FALSE, warning=FALSE}
+# Initial model for Box-Cox assessment
 fit_init <- lm(
   (total.fruits + 1) ~ reg * nutrient * status + amd + rack,
   data = Arabidopsis
 )
 
 bc <- boxcox(fit_init, lambda = seq(0, 1, by = 0.01))
-
 optimal_lambda <- bc$x[which.max(bc$y)]
-optimal_lambda
-
+abline(v = optimal_lambda, lty = 2)
 ```
 
 The Box-Cox transformation reports a lambda value of 0.07, which is close to 0, suggesting that a log transformation may be appropriate. However, since the response variable contains zero counts, we cannot apply a log transformation directly (as log(0) is undefined). Instead, we apply an offset of 1 to each of
@@ -263,9 +257,9 @@ summary(fit_full)
 anova(fit_full, type = 3)
 ```
 
-## Model Reduction
+# Model Reduction
 
-### Backward elimination of non-significant terms
+**Backward elimination of non-significant terms**
 
 ```{r}
 #| echo: false
@@ -303,7 +297,7 @@ cat("\n=== Reduced Model ANOVA ===\n")
 anova(fit_reduced, type = 3)
 ```
 
-### Alternative model reduction via AIC / BIC
+***Alternative model reduction via AIC / BIC***
 
 As an alternative to backward elimination via LRT, we compare all
 possible subsets of the two-way interaction terms using AIC and BIC.
@@ -403,25 +397,41 @@ AIC(fit_nb)
 plot(simulateResiduals(fit_nb))
 ```
 
-
-
 # Assumption Checks
 
-## Residual Plots
+**Residual Plots**
 
-```{r}
-#| echo: false
+- No strong nonlinear pattern  
+- Diagonal band due to zero counts  
+- Residuals approximately normal  
+- Slight variance increase at higher fitted values  
 
-par(mfrow = c(2, 2))
-# Fitted vs Residuals diagnostic plot
-plot(fit_reduced, 
-     type = c("p", "smooth"), col.line = 1, 
-     xlab = "Fitted values", ylab = "Standardized residuals", 
-     main = "Fitted vs Residual Plot")
+```{r, fig.width=4.8, fig.height=3.0, out.width='100%', echo=FALSE}
+par(mar = c(3, 3, 1, 1))
+plot(fit_reduced,
+     type = c("p", "smooth"),
+     col.line = 1,
+     xlab = "Fitted values",
+     ylab = "Std. residuals",
+     main = "")
 ```
 
-The residual vs fitted plot shows an unusual pattern of a diagonal 
-line with a slope of -1 due to the presence of zero counts in the response variable, which creates a cluster of residuals at -1 when the fitted values are close to zero. This pattern is a common artifact when modeling count data with a log transformation and zero counts, and it does not necessarily indicate a violation of model assumptions. However, we will further assess the normality and homoscedasticity of the residuals with additional diagnostic plots.
+# Variance Checks & Conclusion
+
+- Brown–Forsythe (Levene) test:
+  - Some heteroscedasticity across Region and Status
+  - Variance ratios < 1.5 → not severe
+
+- Large sample size (n = 625):
+  - Test is sensitive to small differences*
+
+**Final Assessment**
+
+- Normality: approximately satisfied  
+- Independence: satisfied by design  
+- Equal variance: mild violations  
+
+→ Overall, model assumptions are **reasonably satisfied**
 
 ```{r}
 # Q-Q plot
