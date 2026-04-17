@@ -496,7 +496,7 @@ plot(fit_reduced, rstudent(.) ~ hatvalues(.),
      xlab = "Leverage", 
      ylab = "Standardized Residuals", 
      main = "Leverage vs Residuals")
-points()
+#points()
 ```
 
 ```{r}
