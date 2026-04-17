@@ -194,6 +194,34 @@ denominator degrees of freedom in F-tests.
 
 ## Full Model Fitting
 
+### Box-Cox for full model
+
+As a first step for model fitting, we check the distribution of the response 
+variable and consider which transformation might be appropriate in 
+order to satisfy model assumptions (namely normality and homoscedasticity). 
+We apply the Box-Cox transformation to the response variable (total fruits) and 
+assess the suggested lambda values to determine an appropriate transformation. 
+
+```{r}
+
+library(MASS)
+
+# An offset of 1 is added to total fruits to handle zero counts
+fit_init <- lm(
+  (total.fruits + 1) ~ reg * nutrient * status + amd + rack,
+  data = Arabidopsis
+)
+
+bc <- boxcox(fit_init, lambda = seq(0, 1, by = 0.01))
+
+optimal_lambda <- bc$x[which.max(bc$y)]
+optimal_lambda
+
+```
+
+The Box-Cox transformation reports a lambda value of 0.07, which is close to 0, suggesting that a log transformation may be appropriate. However, since the response variable contains zero counts, we cannot apply a log transformation directly (as log(0) is undefined). Instead, we apply an offset of 1 to each of
+the total fruits counts and then apply a log transformation.
+
 ```{r}
 #| echo: false
 
