@@ -230,10 +230,11 @@ library(lmerTest)
 
 Arabidopsis$nutrient <- factor(Arabidopsis$nutrient)
 Arabidopsis$rack <- factor(Arabidopsis$rack)
-Arabidopsis$sqrt_fruits <- sqrt(Arabidopsis$total.fruits)
+# Arabidopsis$sqrt_fruits <- sqrt(Arabidopsis$total.fruits)
+Arabidopsis$logp1_fruits <- log(Arabidopsis$total.fruits + 1)
 
 fit_full <- lmer(
-  sqrt_fruits ~ reg * nutrient + reg * status + nutrient * status +
+  logp1_fruits ~ reg * nutrient + reg * status + nutrient * status +
     amd + rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
@@ -249,7 +250,7 @@ anova(fit_full, type = 3)
 # Backward elimination: drop non-significant interactions via LRT
 # Start by testing nutrient:status (highest p-value in full model ANOVA)
 fit_no_nut_status <- lmer(
-  sqrt_fruits ~ reg * nutrient + reg * status + amd + rack +
+  logp1_fruits ~ reg * nutrient + reg * status + amd + rack +
     (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
@@ -263,7 +264,7 @@ anova(fit_no_nut_status_ml, fit_full_ml)
 # nutrient:status is non-significant (p = 0.84), so drop it
 # Now test reg:status in the reduced model
 fit_no_reg_status <- lmer(
-  sqrt_fruits ~ reg * nutrient + status + amd + rack +
+  logp1_fruits ~ reg * nutrient + status + amd + rack +
     (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
@@ -294,7 +295,7 @@ with Satterthwaite degrees of freedom.
 | Region $\times$ Nutrients | 8.7988 | 2 | 600.77 | <0.001 |
 | Region $\times$ Status | 2.5587 | 4 | 605.91 | 0.038 |
 
-: Type III F-test results for $\sqrt{\text{Total Fruits}}$
+: Type III F-test results for $\log(\text{Total Fruits} + 1)$
 
 ## Significant Differences
 
