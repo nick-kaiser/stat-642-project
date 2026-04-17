@@ -425,9 +425,19 @@ leveneTest(resid(fit_reduced) ~ Arabidopsis$amd)
 
 The Brown-Forsythe-Levene test flags significant heteroscedasticity across the levels of 
 Region (p = 0.006) and status (p = 0.025), but not for Nutrients or Status. This suggests 
-that the variance of the residuals may differ across regions and culture status 
-unclipped plants, which could indicate a violation of the homoscedasticity assumption. We 
-will further investigate this with additional diagnostic plots.
+that the variance of the residuals may differ across regions and culture status, which could 
+indicate a violation of the homoscedasticity assumption. 
+
+```{r}
+
+tapply(resid(fit_reduced), Arabidopsis$reg, var)
+tapply(resid(fit_reduced), Arabidopsis$status, var)
+
+```
+
+Reviewing the variance estimates more closely across these two groups, we see that the 
+ratio of largest to smallest variance across regions is `r max(tapply(resid(fit_reduced), Arabidopsis$reg, var)) / min(tapply(resid(fit_reduced), Arabidopsis$reg, var))`, and the ratio of largest to smallest variance across status groups is `r max(tapply(resid(fit_reduced), Arabidopsis$status, var)) / min(tapply(resid(fit_reduced), Arabidopsis$status, var))`. While there is some evidence of heteroscedasticity across these groups, the magnitude of the variance differences is not extreme (less than 3-fold difference in variance across groups, 
+a rule of thumb cited in some texts), so we will proceed with the analysis while noting this potential violation.
 
 ```{r}
 #Leverage against standardized residuals
