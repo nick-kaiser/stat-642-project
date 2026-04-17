@@ -258,14 +258,13 @@ with Satterthwaite degrees of freedom.
 
 | Effect | $F$ | df$_1$ | df$_2$ | $p$-value |
 |--------|-----|--------|--------|-----------|
-| Region | TODO | TODO | TODO | TODO |
-| Nutrients | TODO | TODO | TODO | TODO |
-| Status | TODO | TODO | TODO | TODO |
-| AMD | TODO | TODO | TODO | TODO |
-| Rack | TODO | TODO | TODO | TODO |
-| Region $\times$ Nutrients | TODO | TODO | TODO | TODO |
-| Region $\times$ Status | TODO | TODO | TODO | TODO |
-| Nutrients $\times$ Status | TODO | TODO | TODO | TODO |
+| Region | 0.3642 | 2 | 8.73 | 0.705 |
+| Nutrients | 149.8963 | 1 | 601.75 | <0.001 |
+| Status | 2.0602 | 2 | 606.74 | 0.128 |
+| AMD | 6.9777 | 1 | 598.06 | 0.008 |
+| Rack | 71.2301 | 1 | 600.21 | <0.001 |
+| Region $\times$ Nutrients | 8.7988 | 2 | 600.77 | <0.001 |
+| Region $\times$ Status | 2.5587 | 4 | 605.91 | 0.038 |
 
 : Type III F-test results for $\sqrt{\text{Total Fruits}}$
 
