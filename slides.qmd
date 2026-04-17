@@ -290,7 +290,82 @@ emmeans(fit_reduced, pairwise ~ amd)
 
 <!-- Include residual vs. fitted, Q-Q plot, etc. -->
 
-TODO — insert residual diagnostic plots
+```{r}
+#| echo: false
+
+par(mfrow = c(2, 2))
+#Fitted vs Residuals diagnostic plot
+plot(fit_reduced, 
+     type = c("p", "smooth"), col.line = 1, 
+     xlab = "Fitted values", ylab = "Standardized residuals", 
+     main = "Fitted vs Residual Plot")
+
+#Q-Q plot
+lattice::qqmath(fit_reduced, main = "Normal Q-Q plot")
+
+#Scale-Location plot
+#Function found in ?plot.merMod
+scale_loc_plot = function(m, line.col = "red", line.lty = 1, line.lwd = 2) {
+  plot(fit_reduced, sqrt(abs(resid(.))) ~ fitted(.), 
+       type = c("p", "smooth"), 
+       xlab = "Sqrt(Standardized residuals)",
+       ylab = "Fitted values",
+       main = "Scale-Location Plot",
+       par.settings = list(plot.line = 
+                             list(alpha = 1, 
+                                  col = line.col, 
+                                  lty = line.lty, 
+                                  lwd = line.lwd)))
+}
+scale_loc_plot(fit_reduced)
+
+#Leverage against standardized residuals
+plot(fit_reduced, rstudent(.) ~ hatvalues(.), 
+     xlab = "Leverage", 
+     ylab = "Standardized Residuals", 
+     main = "Leverage vs Residuals")
+points()
+```
+
+```{r}
+#Should be no heteroscedasticity for different levels of random effects
+#Check population (popu) and genotype (gen)
+
+#Fitted vs Residuals for population groups
+plot(fit_reduced, 
+     resid(., scaled = TRUE) ~ fitted(.) | popu,
+     abline = 0, 
+     xlab = "Fitted values", 
+     ylab = "Standardized residuals", 
+     main = "Fitted vs Residuals (by Population)")
+
+#Fitted vs Residuals for different levels of genotype
+plot(fit_reduced, 
+     resid(., scaled = TRUE) ~ fitted(.) | gen,
+     abline = 0, 
+     xlab = "Fitted values", 
+     ylab = "Standardized residuals", 
+     main = "Fitted vs Residuals (by Genotype)")
+```
+
+```{r}
+
+#Boxplot by popu (population)
+plot(fit_reduced, popu ~ resid(., scaled = TRUE), 
+     xlab = "Standardized residuals", 
+     ylab = "Population")
+
+#Boxplot by gen (genotype)
+plot(fit_reduced, gen ~ resid(., scaled = TRUE), 
+     xlab = "Standardized residuals", 
+     ylab = "Genotype")
+```
+
+```{r}
+lattice::dotplot(ranef(fit_reduced, condVar = TRUE))$popu
+
+lattice::dotplot(ranef(fit_reduced, condVar = TRUE))$gen
+```
 
 ## Addressing Violations
 
