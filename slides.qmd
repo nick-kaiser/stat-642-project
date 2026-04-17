@@ -182,6 +182,27 @@ The following additional assumptions are made due to the experimental design:
 
 # Analysis & Results
 
+## Data Exploration
+
+Before fitting the model, we perform exploratory data analysis to understand the distribution of the response variable and the relationships between predictors and the response.
+
+```{r}
+
+# Distribution of total fruits
+ggplot(Arabidopsis, aes(x = total.fruits)) +
+  geom_histogram(binwidth = 5, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Total Fruits", x = "Total Fruits", y = "Count") +
+  theme_minimal()
+
+# Distribution of total fruits where total.fruits < 10
+
+ggplot(Arabidopsis %>% filter(total.fruits < 10), aes(x = total.fruits)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Total Fruits (Zoomed In)", x = "Total Fruits", y = "Count") +
+  theme_minimal()
+
+```
+
 ## Model Fitting — Overview
 
 We fit the full LMM with all two-way interactions among Region, Nutrients,
@@ -244,6 +265,8 @@ anova(fit_full, type = 3)
 
 ## Model Reduction
 
+### Backward elimination of non-significant terms
+
 ```{r}
 #| echo: false
 
@@ -261,7 +284,7 @@ fit_no_nut_status_ml <- update(fit_no_nut_status, REML = FALSE)
 cat("=== LRT: drop Nutrients x Status ===\n")
 anova(fit_no_nut_status_ml, fit_full_ml)
 
-# nutrient:status is non-significant (p = 0.84), so drop it
+# nutrient:status is non-significant (p = 0.64), so drop it
 # Now test reg:status in the reduced model
 fit_no_reg_status <- lmer(
   logp1_fruits ~ reg * nutrient + status + amd + rack +
@@ -280,7 +303,189 @@ cat("\n=== Reduced Model ANOVA ===\n")
 anova(fit_reduced, type = 3)
 ```
 
-## Hypothesis Tests — Type III F-tests
+### Alternative model reduction via AIC / BIC
+
+As an alternative to backward elimination via LRT, we compare all
+possible subsets of the two-way interaction terms using AIC and BIC.
+With three interactions (Region $\times$ Nutrients, Region $\times$
+Status, Nutrients $\times$ Status), this yields $2^3 = 8$ candidate
+models. All main effects and covariates are retained in every model.
+Models must be fit with ML (not REML) when comparing fixed-effect
+structures.
+
+```{r}
+#| echo: false
+
+library(knitr)
+
+base <- "logp1_fruits ~ reg + nutrient + status + amd + rack + (1 | popu) + (1 | gen)"
+
+interactions <- list(
+  "Reg x Nut"  = "reg:nutrient",
+  "Reg x Stat" = "reg:status",
+  "Nut x Stat" = "nutrient:status"
+)
+
+# Generate all 8 combinations of interactions
+combos <- do.call(expand.grid, replicate(3, c(FALSE, TRUE), simplify = FALSE))
+names(combos) <- names(interactions)
+
+models <- list()
+for (i in seq_len(nrow(combos))) {
+  included <- names(interactions)[as.logical(combos[i, ])]
+  if (length(included) == 0) {
+    label <- "Main effects only"
+    form <- base
+  } else {
+    label <- paste(included, collapse = " + ")
+    form <- paste(base, paste(interactions[included], collapse = " + "), sep = " + ")
+  }
+  models[[label]] <- lmer(as.formula(form), data = Arabidopsis, REML = FALSE)
+}
+
+aic_bic <- data.frame(
+  Model = names(models),
+  AIC   = sapply(models, AIC),
+  BIC   = sapply(models, BIC)
+)
+
+aic_bic$dAIC <- aic_bic$AIC - min(aic_bic$AIC)
+aic_bic$dBIC <- aic_bic$BIC - min(aic_bic$BIC)
+aic_bic <- aic_bic[order(aic_bic$AIC), ]
+
+knitr::kable(aic_bic, digits = 2, row.names = FALSE)
+```
+
+# Assumption Checks
+
+## Residual Plots
+
+```{r}
+#| echo: false
+
+par(mfrow = c(2, 2))
+# Fitted vs Residuals diagnostic plot
+plot(fit_reduced, 
+     type = c("p", "smooth"), col.line = 1, 
+     xlab = "Fitted values", ylab = "Standardized residuals", 
+     main = "Fitted vs Residual Plot")
+```
+
+The residual vs fitted plot shows an unusual pattern of a diagonal 
+line with a slope of -1 due to the presence of zero counts in the response variable, which creates a cluster of residuals at -1 when the fitted values are close to zero. This pattern is a common artifact when modeling count data with a log transformation and zero counts, and it does not necessarily indicate a violation of model assumptions. However, we will further assess the normality and homoscedasticity of the residuals with additional diagnostic plots.
+
+```{r}
+# Q-Q plot
+lattice::qqmath(fit_reduced, main = "Normal Q-Q plot")
+
+# Formal normality test on residuals
+resids <- resid(fit_reduced, scaled = TRUE)
+shapiro_test <- shapiro.test(resids)
+
+shapiro_test
+```
+
+A linear pattern of residuals in the Q-Q plot indicates that the residuals are 
+approximately normally distributed, which supports the normality assumption of the model. 
+The Shapiro-Wilk test also fails to reject the null hypothesis of normality (p > 0.05), 
+providing further evidence that the residuals do not significantly deviate from a normal 
+distribution.
+
+```{r}
+library(car)
+
+# Scale-Location plot
+# Function found in ?plot.merMod
+scale_loc_plot = function(m, line.col = "red", line.lty = 1, line.lwd = 2) {
+  plot(fit_reduced, sqrt(abs(resid(.))) ~ fitted(.), 
+       type = c("p", "smooth"), 
+       xlab = "Fitted values",
+       ylab = "Sqrt(Standardized residuals)",
+       main = "Scale-Location Plot",
+       par.settings = list(plot.line = 
+                             list(alpha = 1, 
+                                  col = line.col, 
+                                  lty = line.lty, 
+                                  lwd = line.lwd)))
+}
+scale_loc_plot(fit_reduced)
+```
+
+```{r}
+
+library(car)
+
+# Test constant variance of residuals across levels of each factor
+leveneTest(resid(fit_reduced) ~ Arabidopsis$reg)
+leveneTest(resid(fit_reduced) ~ Arabidopsis$nutrient)
+leveneTest(resid(fit_reduced) ~ Arabidopsis$status)
+leveneTest(resid(fit_reduced) ~ Arabidopsis$amd)
+
+```
+
+The Brown-Forsythe-Levene test flags significant heteroscedasticity across the levels of 
+Region (p = 0.006) and status (p = 0.025), but not for Nutrients or Status. This suggests 
+that the variance of the residuals may differ across regions and culture status 
+unclipped plants, which could indicate a violation of the homoscedasticity assumption. We 
+will further investigate this with additional diagnostic plots.
+
+```{r}
+#Leverage against standardized residuals
+plot(fit_reduced, rstudent(.) ~ hatvalues(.), 
+     xlab = "Leverage", 
+     ylab = "Standardized Residuals", 
+     main = "Leverage vs Residuals")
+points()
+```
+
+```{r}
+#Should be no heteroscedasticity for different levels of random effects
+#Check population (popu) and genotype (gen)
+
+#Fitted vs Residuals for population groups
+plot(fit_reduced, 
+     resid(., scaled = TRUE) ~ fitted(.) | popu,
+     abline = 0, 
+     xlab = "Fitted values", 
+     ylab = "Standardized residuals", 
+     main = "Fitted vs Residuals (by Population)")
+
+#Fitted vs Residuals for different levels of genotype
+plot(fit_reduced, 
+     resid(., scaled = TRUE) ~ fitted(.) | gen,
+     abline = 0, 
+     xlab = "Fitted values", 
+     ylab = "Standardized residuals", 
+     main = "Fitted vs Residuals (by Genotype)")
+```
+
+```{r}
+
+#Boxplot by popu (population)
+plot(fit_reduced, popu ~ resid(., scaled = TRUE), 
+     xlab = "Standardized residuals", 
+     ylab = "Population")
+
+#Boxplot by gen (genotype)
+plot(fit_reduced, gen ~ resid(., scaled = TRUE), 
+     xlab = "Standardized residuals", 
+     ylab = "Genotype")
+```
+
+```{r}
+lattice::dotplot(ranef(fit_reduced, condVar = TRUE))$popu
+
+lattice::dotplot(ranef(fit_reduced, condVar = TRUE))$gen
+```
+
+## Addressing Violations
+
+<!-- If assumptions are violated, explain remedial measures -->
+
+- TODO — describe any transformations, alternative methods, etc.
+
+
+# Hypothesis Tests — Type III F-tests
 
 We test the significance of fixed effects using Type III F-tests
 with Satterthwaite degrees of freedom.
@@ -311,20 +516,6 @@ emmeans(fit_reduced, pairwise ~ nutrient | reg)
 emmeans(fit_reduced, pairwise ~ status | reg)
 emmeans(fit_reduced, pairwise ~ amd)
 ```
-
-# Assumption Checks
-
-## Residual Plots
-
-<!-- Include residual vs. fitted, Q-Q plot, etc. -->
-
-TODO — insert residual diagnostic plots
-
-## Addressing Violations
-
-<!-- If assumptions are violated, explain remedial measures -->
-
-- TODO — describe any transformations, alternative methods, etc.
 
 # Conclusion
 
