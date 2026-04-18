@@ -507,7 +507,7 @@ kable(nb_tbl, align = "lccc", caption = "Type III tests for negative binomial GL
 **Residual Plots**
 
 - No strong nonlinear pattern  
-- Diagonal band due to zero counts  
+- Pattern reflects zero-inflation (not model misspecification)  
 - Residuals approximately normal  
 - Slight variance increase at higher fitted values  
 
