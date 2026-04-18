@@ -24,7 +24,12 @@ library(ggplot2)
 library(MASS)
 library(car)
 library(ggplot2)
-library(dplyr)
+library(lme4)
+library(lmerTest)
+library(knitr)
+library(glmmTMB)
+library(DHARMa)
+library(emmeans)
 
 ```
 
@@ -204,25 +209,32 @@ ggplot(Arabidopsis %>% filter(total.fruits < 10), aes(x = total.fruits)) +
 ```
 :::
 :::
-# Model Fitting — Overview
+# Model Fitting
 
-We fit the full LMM with all two-way interactions among Region, Nutrients,
-and Status, then perform backward elimination of non-significant
-interactions using likelihood ratio tests ($\alpha = 0.05$) to arrive at a
-reduced model.
+:::columns
+:::column
+**Overview**
+- Fit full LMM with all two-way interactions:
+  - Region × Nutrients
+  - Region × Status
+  - Nutrients × Status  
 
-We use `lme4::lmer()` for model fitting and `lmerTest` for Satterthwaite
-denominator degrees of freedom in F-tests.
+- Use backward elimination (LRT, \( \alpha = 0.05 \))  
+  → obtain reduced model  
 
-**Full Model Fitting: Box-Cox for full model**
+- Model fitted with:
+  - `lme4::lmer()`  
+  - `lmerTest` (Satterthwaite F-tests)
 
-As a first step for model fitting, we check the distribution of the response 
-variable and consider which transformation might be appropriate in 
-order to satisfy model assumptions (namely normality and homoscedasticity). 
-We apply the Box-Cox transformation to the response variable (total fruits) and 
-assess the suggested lambda values to determine an appropriate transformation. 
+**Response Transformation**
 
-```{r, fig.width=4.5, fig.height=3.0, out.width='85%', echo=FALSE, message=FALSE, warning=FALSE}
+- Use Box-Cox to assess appropriate transformation  
+- Result: $\lambda \approx 0.07 \approx 0$ → log transform 
+- Use $\log(\text{Total Fruits} + 1)$ to handle zeros
+:::
+:::column
+
+```{r, fig.width=5, fig.height=5, out.width='100%', echo=FALSE, message=FALSE, warning=FALSE}
 # Initial model for Box-Cox assessment
 fit_init <- lm(
   (total.fruits + 1) ~ reg * nutrient * status + amd + rack,
@@ -234,14 +246,14 @@ optimal_lambda <- bc$x[which.max(bc$y)]
 abline(v = optimal_lambda, lty = 2)
 ```
 
-The Box-Cox transformation reports a lambda value of 0.07, which is close to 0, suggesting that a log transformation may be appropriate. However, since the response variable contains zero counts, we cannot apply a log transformation directly (as log(0) is undefined). Instead, we apply an offset of 1 to each of
-the total fruits counts and then apply a log transformation.
+::: 
+:::
+
+# Type III ANOVA
+
 
 ```{r}
 #| echo: false
-
-library(lme4)
-library(lmerTest)
 
 Arabidopsis$nutrient <- factor(Arabidopsis$nutrient)
 Arabidopsis$rack <- factor(Arabidopsis$rack)
@@ -253,13 +265,36 @@ fit_full <- lmer(
     amd + rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
-summary(fit_full)
-anova(fit_full, type = 3)
+
+#summary(fit_full)
+#anova(fit_full, type = 3)
+#cat("**Model fit summary**\n\n")
+#cat("- Response: log(Total Fruits + 1)\n")
+#cat("- Observations: ", nobs(fit_full), "\n", sep = "")
+#cat("- Random effects: Population, Genotype\n")
+#cat("- Estimation: REML with Satterthwaite F-tests\n")
+
+anova_tab <- anova(fit_full, type = 3)
+knitr::kable(
+  round(as.data.frame(anova_tab), 3),
+  caption = "Type III ANOVA for Full Model"
+)
 ```
+
 
 # Model Reduction
 
-**Backward elimination of non-significant terms**
+**Backward elimination of non-significant terms** (LRT, $\alpha = 0.05$)
+
+- Test **Nutrients × Status**
+  - LRT p-value = 0.64 → not significant  
+  → remove interaction  
+
+- Test **Region × Status**
+  - LRT not significant  
+  → remove interaction  
+
+**Final Reduced Model**
 
 ```{r}
 #| echo: false
@@ -276,7 +311,8 @@ fit_no_nut_status <- lmer(
 fit_full_ml <- update(fit_full, REML = FALSE)
 fit_no_nut_status_ml <- update(fit_no_nut_status, REML = FALSE)
 cat("=== LRT: drop Nutrients x Status ===\n")
-anova(fit_no_nut_status_ml, fit_full_ml)
+#anova(fit_no_nut_status_ml, fit_full_ml)
+lrt1 <- anova(fit_no_nut_status_ml, fit_full_ml)
 
 # nutrient:status is non-significant (p = 0.64), so drop it
 # Now test reg:status in the reduced model
@@ -286,31 +322,74 @@ fit_no_reg_status <- lmer(
   data = Arabidopsis
 )
 fit_no_reg_status_ml <- update(fit_no_reg_status, REML = FALSE)
-cat("\n=== LRT: drop Region x Status ===\n")
-anova(fit_no_reg_status_ml, fit_no_nut_status_ml)
+#cat("\n=== LRT: drop Region x Status ===\n")
+#anova(fit_no_reg_status_ml, fit_no_nut_status_ml)
+lrt2 <- anova(fit_no_reg_status_ml, fit_no_nut_status_ml)
+
 
 # Use the reduced model (without nutrient:status) refit with REML
 fit_reduced <- fit_no_nut_status
-cat("\n=== Reduced Model Summary ===\n")
-summary(fit_reduced)
-cat("\n=== Reduced Model ANOVA ===\n")
-anova(fit_reduced, type = 3)
+anova_reduced <- anova(fit_reduced, type = 3)
+#cat("\n=== Reduced Model Summary ===\n")
+#summary(fit_reduced)
+#cat("\n=== Reduced Model ANOVA ===\n")
+#anova(fit_reduced, type = 3)
+
+# ---- Build clean LRT summary table ----
+lrt_summary <- data.frame(
+  Test = c("Drop Nutrients × Status", "Drop Region × Status"),
+  Chisq = c(lrt1$Chisq[2], lrt2$Chisq[2]),
+  Df = c(lrt1$Df[2], lrt2$Df[2]),
+  P_Value = c(lrt1$`Pr(>Chisq)`[2], lrt2$`Pr(>Chisq)`[2]),
+  Decision = c(
+    ifelse(lrt1$`Pr(>Chisq)`[2] > 0.05, "Drop", "Keep"),
+    ifelse(lrt2$`Pr(>Chisq)`[2] > 0.05, "Drop", "Keep")
+  )
+)
+
+lrt_summary$Chisq <- round(lrt_summary$Chisq, 3)
+lrt_summary$P_Value <- signif(lrt_summary$P_Value, 3)
+
+# ---- Build reduced-model ANOVA table ----
+anova_tbl <- as.data.frame(anova_reduced)
+anova_tbl$Effect <- rownames(anova_tbl)
+rownames(anova_tbl) <- NULL
+
+anova_tbl <- anova_tbl %>%
+  dplyr::select(Effect, `NumDF`, `DenDF`, `F value`, `Pr(>F)`) %>%
+  dplyr::mutate(
+    DenDF = round(DenDF, 2),
+    `F value` = round(`F value`, 2),
+    `Pr(>F)` = signif(`Pr(>F)`, 3)
+  )
+
+# ---- Print nicely ----
+cat("**Backward elimination (LRT, ML fit)**\n\n")
+kable(
+  lrt_summary,
+  align = "lcccc",
+  col.names = c("Test", "Chisq", "Df", "p-value", "Decision")
+)
+
+cat("\n\n**Reduced model: Type III tests**\n\n")
+kable(
+  anova_tbl,
+  align = "lcccc",
+  col.names = c("Effect", "df1", "df2", "F", "p-value")
+)
 ```
+
+# Model Reduction via AIC / BIC
 
 ***Alternative model reduction via AIC / BIC***
 
-As an alternative to backward elimination via LRT, we compare all
-possible subsets of the two-way interaction terms using AIC and BIC.
-With three interactions (Region $\times$ Nutrients, Region $\times$
-Status, Nutrients $\times$ Status), this yields $2^3 = 8$ candidate
-models. All main effects and covariates are retained in every model.
-Models must be fit with ML (not REML) when comparing fixed-effect
-structures.
+- Compare all subsets of interaction terms using AIC/BIC  
+- 3 interactions → \(2^3 = 8\) candidate models  
+- All main effects retained  
+- Models fit with ML for comparison 
 
 ```{r}
 #| echo: false
-
-library(knitr)
 
 base <- "logp1_fruits ~ reg + nutrient + status + amd + rack + (1 | popu) + (1 | gen)"
 
@@ -350,19 +429,32 @@ aic_bic <- aic_bic[order(aic_bic$AIC), ]
 knitr::kable(aic_bic, digits = 2, row.names = FALSE)
 ```
 
-## Alternative GLMM with Negative Binomial Family
+# Alternative GLMM with Negative Binomial Family
 
-Given that the response is a count variable with many zeros and the heteroscedasticity 
-across some variables, we also fit a generalized linear mixed model (GLMM) with a negative 
-binomial family to see if it provides a better fit to the data.
+- Because **Total Fruits** is a count variable with many zeros, we also fit a  
+  **negative binomial GLMM** on the original response scale
+
+- Same fixed/random effects as the reduced LMM:
+  - Region × Nutrients
+  - Region × Status
+  - AMD, Rack
+  - random effects for Population and Genotype
+
+- Goal:
+  - assess whether a count-based model provides a better fit
+  - compare conclusions with the Gaussian LMM
+
+# Alternative GLMM with Negative Binomial Family
+
+**Main Result**
+
+- The negative binomial GLMM gave similar conclusions for key fixed effects  
+- We retained the LMM as the primary model for interpretability
 
 ```{r}
 #| echo: false
 #| warning: false
 #| message: false
-
-library(glmmTMB)
-library(DHARMa)
 
 # Fit the same reduced structure as fit_reduced, but with a negative
 # binomial response on the original count scale (no log1p transform).
@@ -373,31 +465,23 @@ fit_nb <- glmmTMB(
   family = nbinom2
 )
 
-cat("=== Negative Binomial GLMM Summary ===\n")
-summary(fit_nb)
+nb_anova <- as.data.frame(car::Anova(fit_nb, type = 3))
+nb_anova$Effect <- rownames(nb_anova)
+rownames(nb_anova) <- NULL
 
-cat("\n=== Type III Wald Chi-square tests ===\n")
-car::Anova(fit_nb, type = 3)
+nb_tbl <- nb_anova[, c("Effect", "Chisq", "Df", "Pr(>Chisq)")]
+names(nb_tbl) <- c("Effect", "Chisq", "Df", "p-value")
+nb_tbl$Chisq <- round(nb_tbl$Chisq, 2)
+nb_tbl$`p-value` <- signif(nb_tbl$`p-value`, 3)
 
-# Compare Gaussian LMM on log1p scale vs NB GLMM on count scale via AIC.
-# Note: AICs are only directly comparable because glmmTMB reports AIC on
-# the original response scale. Use with caution.
-cat("\n=== AIC comparison ===\n")
-data.frame(
-  Model = c("Gaussian LMM (log1p)", "Negative Binomial GLMM"),
-  AIC   = c(AIC(fit_reduced), AIC(fit_nb))
-)
-
-
-jacobian_correction <- 2 * sum(log(Arabidopsis$total.fruits + 1))
-aic_lmm_adjusted <- AIC(fit_reduced) + jacobian_correction
-aic_lmm_adjusted
-AIC(fit_nb)
-
-plot(simulateResiduals(fit_nb))
+kable(nb_tbl, align = "lccc", caption = "Type III tests for negative binomial GLMM")
 ```
 
 # Assumption Checks
+
+::: columns
+
+::: column
 
 **Residual Plots**
 
@@ -406,8 +490,12 @@ plot(simulateResiduals(fit_nb))
 - Residuals approximately normal  
 - Slight variance increase at higher fitted values  
 
-```{r, fig.width=4.8, fig.height=3.0, out.width='100%', echo=FALSE}
-par(mar = c(3, 3, 1, 1))
+:::
+
+::: column
+
+```{r, fig.width=4.5, fig.height=3, out.width='100%', echo=FALSE}
+par(mar = c(2.5, 2.5, 0.5, 0.5))
 plot(fit_reduced,
      type = c("p", "smooth"),
      col.line = 1,
@@ -415,6 +503,9 @@ plot(fit_reduced,
      ylab = "Std. residuals",
      main = "")
 ```
+:::
+
+:::
 
 # Variance Checks & Conclusion
 
@@ -433,7 +524,18 @@ plot(fit_reduced,
 
 → Overall, model assumptions are **reasonably satisfied**
 
-```{r}
+# Assumption Checks: Q–Q plot
+
+::: columns
+::: column
+
+- Q–Q plot shows residuals ≈ normal  
+- Shapiro–Wilk test (p > 0.05) supports normality  
+:::
+
+::: column
+
+```{r, fig.width=4.5, fig.height=3, out.width='100%', echo=FALSE}
 # Q-Q plot
 lattice::qqmath(fit_reduced, main = "Normal Q-Q plot")
 
@@ -444,122 +546,82 @@ shapiro_test <- shapiro.test(resids)
 shapiro_test
 ```
 
-A linear pattern of residuals in the Q-Q plot indicates that the residuals are 
-approximately normally distributed, which supports the normality assumption of the model. 
-The Shapiro-Wilk test also fails to reject the null hypothesis of normality (p > 0.05), 
-providing further evidence that the residuals do not significantly deviate from a normal 
-distribution.
+:::
 
-```{r}
-library(car)
+:::
 
-# Scale-Location plot
-# Function found in ?plot.merMod
-scale_loc_plot = function(m, line.col = "red", line.lty = 1, line.lwd = 2) {
-  plot(fit_reduced, sqrt(abs(resid(.))) ~ fitted(.), 
-       type = c("p", "smooth"), 
-       xlab = "Fitted values",
-       ylab = "Sqrt(Standardized residuals)",
-       main = "Scale-Location Plot",
-       par.settings = list(plot.line = 
-                             list(alpha = 1, 
-                                  col = line.col, 
-                                  lty = line.lty, 
-                                  lwd = line.lwd)))
+# Assumption Checks: Variance
+
+- Scale-location plot:
+  - Slight increase in variance at higher fitted values  
+  - No severe heteroscedasticity pattern  
+
+```{r, fig.width=5, fig.height=2.8, out.width='80%', fig.align='center', echo=FALSE}
+scale_loc_plot = function(m) {
+  plot(m, sqrt(abs(resid(.))) ~ fitted(.), 
+       type = c("p", "smooth"),
+       xlab = "Fitted",
+       ylab = "Sqrt(|Residuals|)",
+       main = "")
 }
 scale_loc_plot(fit_reduced)
+
 ```
 
-```{r}
+# Assumption Checks 
 
+**Levene Test**
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(car)
 
-# Test constant variance of residuals across levels of each factor
-leveneTest(resid(fit_reduced) ~ Arabidopsis$reg)
-leveneTest(resid(fit_reduced) ~ Arabidopsis$nutrient)
-leveneTest(resid(fit_reduced) ~ Arabidopsis$status)
-leveneTest(resid(fit_reduced) ~ Arabidopsis$amd)
+lev_results <- data.frame(
+  Factor = c("Region", "Nutrients", "Status", "AMD"),
+  p_value = c(
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$reg)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$nutrient)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$status)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$amd)[1,3]
+  )
+)
+
+lev_results$p_value <- signif(lev_results$p_value, 3)
+knitr::kable(lev_results, align = "lc")
 
 ```
 
-The Brown-Forsythe-Levene test flags significant heteroscedasticity across the levels of 
-Region (p = 0.006) and status (p = 0.025), but not for Nutrients or Status. This suggests 
-that the variance of the residuals may differ across regions and culture status, which could 
-indicate a violation of the homoscedasticity assumption. 
+**Final Assessment**
 
-```{r}
+```{r, echo=FALSE}
+var_reg <- tapply(resid(fit_reduced), Arabidopsis$reg, var)
+var_status <- tapply(resid(fit_reduced), Arabidopsis$status, var)
 
-tapply(resid(fit_reduced), Arabidopsis$reg, var)
-tapply(resid(fit_reduced), Arabidopsis$status, var)
+ratio_reg <- max(var_reg) / min(var_reg)
+ratio_status <- max(var_status) / min(var_status)
+
+data.frame(
+  Group = c("Region", "Status"),
+  Variance_Ratio = round(c(ratio_reg, ratio_status), 2)
+) %>% knitr::kable(align = "lc")
 
 ```
 
-Given the large sample size (n = 625), the BFL test becomes sensitive to relatively small differences in variance across groups, which may not be practically significant.
+# Addressing Assumption Violations
 
-Reviewing the variance estimates more closely across these two groups, we see that the 
-ratio of largest to smallest variance across regions is `r max(tapply(resid(fit_reduced), Arabidopsis$reg, var)) / min(tapply(resid(fit_reduced), Arabidopsis$reg, var))`, and the ratio of largest to smallest variance across status groups is `r max(tapply(resid(fit_reduced), Arabidopsis$status, var)) / min(tapply(resid(fit_reduced), Arabidopsis$status, var))`. While there is some evidence of heteroscedasticity across these groups, the magnitude of the variance differences is not extreme (less than 3-fold difference in variance across groups, 
-a rule of thumb cited in some texts), so we will proceed with the analysis while noting this potential violation.
+- Applied **log(Total Fruits + 1)** to address skewness and zeros  
+- Checked heteroscedasticity:
+  - Some variation across groups, but not severe  
 
-```{r}
-#Leverage against standardized residuals
-plot(fit_reduced, rstudent(.) ~ hatvalues(.), 
-     xlab = "Leverage", 
-     ylab = "Standardized Residuals", 
-     main = "Leverage vs Residuals")
-#points()
-```
+- Fit **negative binomial GLMM** as an alternative model  
+  - Results consistent with LMM  
 
-```{r}
-#Should be no heteroscedasticity for different levels of random effects
-#Check population (popu) and genotype (gen)
+**Conclusion**
 
-#Fitted vs Residuals for population groups
-plot(fit_reduced, 
-     resid(., scaled = TRUE) ~ fitted(.) | popu,
-     abline = 0, 
-     xlab = "Fitted values", 
-     ylab = "Standardized residuals", 
-     main = "Fitted vs Residuals (by Population)")
-
-#Fitted vs Residuals for different levels of genotype
-plot(fit_reduced, 
-     resid(., scaled = TRUE) ~ fitted(.) | gen,
-     abline = 0, 
-     xlab = "Fitted values", 
-     ylab = "Standardized residuals", 
-     main = "Fitted vs Residuals (by Genotype)")
-```
-
-```{r}
-
-#Boxplot by popu (population)
-plot(fit_reduced, popu ~ resid(., scaled = TRUE), 
-     xlab = "Standardized residuals", 
-     ylab = "Population")
-
-#Boxplot by gen (genotype)
-plot(fit_reduced, gen ~ resid(., scaled = TRUE), 
-     xlab = "Standardized residuals", 
-     ylab = "Genotype")
-```
-
-```{r}
-lattice::dotplot(ranef(fit_reduced, condVar = TRUE))$popu
-
-lattice::dotplot(ranef(fit_reduced, condVar = TRUE))$gen
-```
-
-## Addressing Violations
-
-<!-- If assumptions are violated, explain remedial measures -->
-
-- TODO — describe any transformations, alternative methods, etc.
+- No major violations affecting inference  
+- LMM results considered reliable  
 
 
 # Hypothesis Tests — Type III F-tests
-
-We test the significance of fixed effects using Type III F-tests
-with Satterthwaite degrees of freedom.
 
 | Effect | $F$ | df$_1$ | df$_2$ | $p$-value |
 |--------|-----|--------|--------|-----------|
@@ -573,19 +635,25 @@ with Satterthwaite degrees of freedom.
 
 : Type III F-test results for $\log(\text{Total Fruits} + 1)$
 
-## Significant Differences
+**Significant Differences**
 
-When the null hypothesis is rejected for a fixed effect, we examine
-estimated marginal means (EMMs) to determine which groups differ and
-the direction of the effect.
+- Significant: **Nutrients, AMD, Rack**  
+- Significant interactions:  
+  - Region × Nutrients  
+  - Region × Status
+  
+# Post-hoc Analysis (EMMs)
+
+- For significant effects, examine **estimated marginal means**
 
 ```{r}
 #| echo: false
 
-library(emmeans)
-emmeans(fit_reduced, pairwise ~ nutrient | reg)
-emmeans(fit_reduced, pairwise ~ status | reg)
-emmeans(fit_reduced, pairwise ~ amd)
+emm_nutrient <- emmeans(fit_reduced, pairwise ~ nutrient | reg)
+emm_status   <- emmeans(fit_reduced, pairwise ~ status | reg)
+emm_amd      <- emmeans(fit_reduced, pairwise ~ amd)
+
+summary(emm_nutrient$contrasts)
 ```
 
 # Summary of Findings
