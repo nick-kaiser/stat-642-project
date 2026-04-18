@@ -1,8 +1,10 @@
 ---
-title: "Arabidopsis Growth Under Nutrients and Damage"
-subtitle: "STAT 642 — Spring 2026"
-author: "Team 11"
-date: "April 20, 2026"
+title: ""
+subtitle: ""
+author: ""
+date: ""
+metadata:
+  title: "Arabidopsis Growth Under Nutrients and Damage"
 format:
   beamer:
     theme: "Madrid"
@@ -11,6 +13,7 @@ format:
     navigation: horizontal
     aspectratio: 169
     fontsize: 10pt
+    title-slide: false
     header-includes:
       - \usepackage{booktabs}
 ---
@@ -33,16 +36,20 @@ library(emmeans)
 
 ```
 
-# Outline
+# Arabidopsis Growth Under Nutrients and Damage {.center .vcenter}
+
+**STAT 642 — Spring 2026**  
+**Team 11**
+
+**Outline**
 
 1. Introduction & Data Description
-2. Research Questions
-3. Model Specification & Assumptions
-4. Analysis & Results
-5. Assumption Checks
-6. Conclusion
+2. Model
+3. Analysis & Results
+4. Assumption Checks
+5. Conclusion
 
-# Introduction & Data Description
+# 1.1 Introduction & Data Description
 
 **Source:** Our source dataset is called `Arabadopsis`, and was generated
 from a DoE experiment on Arabadopsis thaliana plants performed by the Center 
@@ -62,7 +69,29 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 
 **Unit of observation:** individual plants
 
-# Variables
+# 1.2 What Is Interesting About These Data?
+
+- Plant response to **apical meristem damage (AMD)** reflects growth, survival, and adaptation
+- AMD occurs due to **herbivory and environmental stress**
+- Prior research shows **conflicting results**:
+  - Some: higher nutrients → higher tolerance  
+  - Others: higher nutrients → lower tolerance
+- This dataset allows a **controlled test** of how nutrients affect plant response to damage
+
+**Research Questions**
+
+Our research questions in analyzing this dataset are as follows:
+
+1. How do the growth and reproductive responses of Arabidopsis thaliana to apical meristem damage (AMD) 
+vary across different regions, nutrient levels, and transplant sources?
+
+2. Are there significant interactions between region, nutrient levels, and transplant sources in 
+determining the plant's response to AMD?
+
+3. How much of the variability in plant response to AMD can be attributed to differences between 
+populations and maternal seed families within regions?
+
+# 1.3 Variables
 \small
 | Variable | Type | Description |
 |----------|------|-------------|
@@ -75,7 +104,7 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 | Population | Random grouping | The population of the plant, nested within Region (9 populations) |
 | Genotype | Random grouping | The maternal seed family, nested within Population (24 families) |
 
-# Experimental Design
+# 1.4 Experimental Design
 
 - **Study organism:** *Arabidopsis thaliana*
 - **Sampling structure:** maternal seed families collected from populations in **3 regions** (Northern Spain, Netherlands, Southern Sweden)
@@ -98,89 +127,7 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 - **Sample size:** \(n = 625\)
 - **Average replication:** about 6.5 plants per seed-family-by-treatment combination
 
-# What Is Interesting About These Data?
-
-- Plant response to **apical meristem damage (AMD)** reflects growth, survival, and adaptation
-- AMD occurs due to **herbivory and environmental stress**
-- Prior research shows **conflicting results**:
-  - Some: higher nutrients → higher tolerance  
-  - Others: higher nutrients → lower tolerance
-- This dataset allows a **controlled test** of how nutrients affect plant response to damage
-
-**Research Questions**
-
-Our research questions in analyzing this dataset are as follows:
-
-1. How do the growth and reproductive responses of Arabidopsis thaliana to apical meristem damage (AMD) 
-vary across different regions, nutrient levels, and transplant sources?
-
-2. Are there significant interactions between region, nutrient levels, and transplant sources in 
-determining the plant's response to AMD?
-
-3. How much of the variability in plant response to AMD can be attributed to differences between 
-populations and maternal seed families within regions?
-
-# Model: Why a Mixed-Effects Model?
-
-A mixed-effects model is appropriate because the data have a
-**hierarchical structure**:
-
-- Plants are grouped within **genotypes**
-- Genotypes are grouped within **populations**
-- Populations are grouped within **regions**
-
-We fit a linear mixed-effects model (LMM) with total fruits
-(sqrt-transformed) as the response.
-$$
-Y_{ijklmno} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
-$$
-
-Fixed effects:
-
-- Region, Nutrients, Status, Rack, AMD
-
-- Region × Nutrients
-
-- Region × Status
-
-- Nutrients × Status
-
-# Model: Parameter Definitions
-
-**Fixed effects:**
-
-- $\mu$: overall intercept
-- $\alpha_i$: effect of Region ($i = 1, 2, 3$; NL, SP, SW)
-- $\beta_j$: effect of Nutrients ($j = 1, 2$; low, high)
-- $\gamma_k$: effect of Status/Transplant ($k = 1, 2, 3$; Normal, Petri.Plate, Transplant)
-- $\delta_l$: effect of Rack ($l = 1, 2$)
-- $\phi_m$: effect of AMD ($m = 1, 2$; clipped, unclipped)
-- $(\alpha\beta)_{ij}$: Region $\times$ Nutrients interaction
-- $(\alpha\gamma)_{ik}$: Region $\times$ Status interaction
-- $(\beta\gamma)_{jk}$: Nutrients $\times$ Status interaction
-
-**Random effects:**
-
-- $P_{n(i)} \sim N(0, \sigma^2_P)$: Population $n$ nested within Region $i$
-- $F_{o(ni)} \sim N(0, \sigma^2_F)$: Maternal Seed Family $o$ nested within Population and Region
-- $\varepsilon_{ijklmno} \sim N(0, \sigma^2)$: residual error
-
-# Assumptions
-
-As this data will be analyzed as a linear mixed-effects model, the following assumptions must be met:
-
-1. **Linearity** — the relationship between predictors and each (transformed) response is linear
-2. **Independence** — observations are independent conditional on the random effects
-3. **Normality** — random effects and residual errors are normally distributed
-4. **Equal Variance** — constant residual variance (homoscedasticity)
-5. **Correct Model Specification** — the model includes all relevant predictors and interactions, and the random effects structure appropriately captures the nesting and variability in the data
-
-The following additional assumptions are made due to the experimental design:
-
-6. **Random Sampling within Strata** — within each region, populations and maternal seed families are assumed to be representative samples from the broader distribution of populations and families in that region, such that the random effects $P_{n(i)}$ and $F_{o(ni)}$ are exchangeable draws from their respective normal distributions
-7. **Exogeneity of Random Effects** — the random effects are uncorrelated with the fixed effects
-
-# Data Exploration & Results
+# 1.5 Data Exploration & Results
 
 Before fitting the model, we perform exploratory data analysis to understand the distribution of the response variable and the relationships between predictors and the response.
 
@@ -209,7 +156,71 @@ ggplot(Arabidopsis %>% filter(total.fruits < 10), aes(x = total.fruits)) +
 ```
 :::
 :::
-# Model Fitting
+
+# 2.1 Model
+
+**Why a Mixed-Effects Model?**
+
+A mixed-effects model is appropriate because the data have a
+**hierarchical structure**:
+
+- Plants are grouped within **genotypes**
+- Genotypes are grouped within **populations**
+- Populations are grouped within **regions**
+
+We fit a linear mixed-effects model (LMM) with total fruits
+(sqrt-transformed) as the response.
+$$
+Y_{ijklmno} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
+$$
+
+Fixed effects:
+
+- Region, Nutrients, Status, Rack, AMD
+
+- Region × Nutrients
+
+- Region × Status
+
+- Nutrients × Status
+
+# 2.2 Model Setup
+
+**Fixed effects:**
+
+- $\mu$: overall intercept
+- $\alpha_i$: effect of Region ($i = 1, 2, 3$; NL, SP, SW)
+- $\beta_j$: effect of Nutrients ($j = 1, 2$; low, high)
+- $\gamma_k$: effect of Status/Transplant ($k = 1, 2, 3$; Normal, Petri.Plate, Transplant)
+- $\delta_l$: effect of Rack ($l = 1, 2$)
+- $\phi_m$: effect of AMD ($m = 1, 2$; clipped, unclipped)
+- $(\alpha\beta)_{ij}$: Region $\times$ Nutrients interaction
+- $(\alpha\gamma)_{ik}$: Region $\times$ Status interaction
+- $(\beta\gamma)_{jk}$: Nutrients $\times$ Status interaction
+
+**Random effects:**
+
+- $P_{n(i)} \sim N(0, \sigma^2_P)$: Population $n$ nested within Region $i$
+- $F_{o(ni)} \sim N(0, \sigma^2_F)$: Maternal Seed Family $o$ nested within Population and Region
+- $\varepsilon_{ijklmno} \sim N(0, \sigma^2)$: residual error
+
+# 2.3 Assumptions
+
+As this data will be analyzed as a linear mixed-effects model, the following assumptions must be met:
+
+1. **Linearity** — the relationship between predictors and each (transformed) response is linear
+2. **Independence** — observations are independent conditional on the random effects
+3. **Normality** — random effects and residual errors are normally distributed
+4. **Equal Variance** — constant residual variance (homoscedasticity)
+5. **Correct Model Specification** — the model includes all relevant predictors and interactions, and the random effects structure appropriately captures the nesting and variability in the data
+
+The following additional assumptions are made due to the experimental design:
+
+6. **Random Sampling within Strata** — within each region, populations and maternal seed families are assumed to be representative samples from the broader distribution of populations and families in that region, such that the random effects $P_{n(i)}$ and $F_{o(ni)}$ are exchangeable draws from their respective normal distributions
+7. **Exogeneity of Random Effects** — the random effects are uncorrelated with the fixed effects
+
+
+# 2.4 Model Fitting
 
 :::columns
 :::column
@@ -249,8 +260,9 @@ abline(v = optimal_lambda, lty = 2)
 ::: 
 :::
 
-# Type III ANOVA
+# 3.1 Analyse
 
+**Type III ANOVA**
 
 ```{r}
 #| echo: false
@@ -282,7 +294,7 @@ knitr::kable(
 ```
 
 
-# Model Reduction
+# 3.2 Model Reduction
 
 **Backward elimination of non-significant terms** (LRT, $\alpha = 0.05$)
 
@@ -379,7 +391,7 @@ kable(
 )
 ```
 
-# Model Reduction via AIC / BIC
+# 3.3 Model Reduction via AIC / BIC
 
 ***Alternative model reduction via AIC / BIC***
 
@@ -429,10 +441,13 @@ aic_bic <- aic_bic[order(aic_bic$AIC), ]
 knitr::kable(aic_bic, digits = 2, row.names = FALSE)
 ```
 
-# Alternative GLMM with Negative Binomial Family
+# 3.4 Alternative GLMM with Negative Binomial Family
 
-- Because **Total Fruits** is a count variable with many zeros, we also fit a  
-  **negative binomial GLMM** on the original response scale
+::: columns
+
+::: column
+
+- **Total Fruits** is a count variable with many zeros → fit a **negative binomial GLMM** on the original response scale
 
 - Same fixed/random effects as the reduced LMM:
   - Region × Nutrients
@@ -444,12 +459,14 @@ knitr::kable(aic_bic, digits = 2, row.names = FALSE)
   - assess whether a count-based model provides a better fit
   - compare conclusions with the Gaussian LMM
 
-# Alternative GLMM with Negative Binomial Family
-
 **Main Result**
 
 - The negative binomial GLMM gave similar conclusions for key fixed effects  
 - We retained the LMM as the primary model for interpretability
+
+:::
+
+::: column
 
 ```{r}
 #| echo: false
@@ -477,7 +494,11 @@ nb_tbl$`p-value` <- signif(nb_tbl$`p-value`, 3)
 kable(nb_tbl, align = "lccc", caption = "Type III tests for negative binomial GLMM")
 ```
 
-# Assumption Checks
+:::
+
+:::
+
+# 4.1 Assumption Checks
 
 ::: columns
 
@@ -507,7 +528,7 @@ plot(fit_reduced,
 
 :::
 
-# Variance Checks & Conclusion
+# 4.2 Variance Checks & Conclusion
 
 - Brown–Forsythe (Levene) test:
   - Some heteroscedasticity across Region and Status
@@ -524,13 +545,20 @@ plot(fit_reduced,
 
 → Overall, model assumptions are **reasonably satisfied**
 
-# Assumption Checks: Q–Q plot
+# 4.3 Assumption Checks: Q–Q plot
 
 ::: columns
 ::: column
 
-- Q–Q plot shows residuals ≈ normal  
+- Q–Q plot shows residuals $≈$ normal  
 - Shapiro–Wilk test (p > 0.05) supports normality  
+```{r, fig.width=4.5, fig.height=3, out.width='100%', echo=FALSE}
+# Formal normality test on residuals
+resids <- resid(fit_reduced, scaled = TRUE)
+shapiro_test <- shapiro.test(resids)
+
+shapiro_test
+```
 :::
 
 ::: column
@@ -538,19 +566,13 @@ plot(fit_reduced,
 ```{r, fig.width=4.5, fig.height=3, out.width='100%', echo=FALSE}
 # Q-Q plot
 lattice::qqmath(fit_reduced, main = "Normal Q-Q plot")
-
-# Formal normality test on residuals
-resids <- resid(fit_reduced, scaled = TRUE)
-shapiro_test <- shapiro.test(resids)
-
-shapiro_test
 ```
 
 :::
 
 :::
 
-# Assumption Checks: Variance
+# 4.4 Assumption Checks: Variance
 
 - Scale-location plot:
   - Slight increase in variance at higher fitted values  
@@ -568,7 +590,11 @@ scale_loc_plot(fit_reduced)
 
 ```
 
-# Assumption Checks 
+# 4.5 Conlusion
+
+::: columns
+
+::: column
 
 **Levene Test**
 
@@ -606,22 +632,26 @@ data.frame(
 
 ```
 
-# Addressing Assumption Violations
+:::
 
-- Applied **log(Total Fruits + 1)** to address skewness and zeros  
-- Checked heteroscedasticity:
-  - Some variation across groups, but not severe  
-
-- Fit **negative binomial GLMM** as an alternative model  
-  - Results consistent with LMM  
+::: column
 
 **Conclusion**
 
-- No major violations affecting inference  
-- LMM results considered reliable  
+- Log transformation addresses skewness and zeros 
+
+- Mild heteroscedasticity, but not severe  
+
+- GLMM confirms robustness of results  
 
 
-# Hypothesis Tests — Type III F-tests
+→ Model assumptions reasonably satisfied  
+
+:::
+:::
+
+
+# 4.6 Hypothesis Tests — Type III F-tests
 
 | Effect | $F$ | df$_1$ | df$_2$ | $p$-value |
 |--------|-----|--------|--------|-----------|
@@ -642,7 +672,7 @@ data.frame(
   - Region × Nutrients  
   - Region × Status
   
-# Post-hoc Analysis (EMMs)
+# 4.7 Post-hoc Analysis (EMMs)
 
 - For significant effects, examine **estimated marginal means**
 
@@ -656,7 +686,7 @@ emm_amd      <- emmeans(fit_reduced, pairwise ~ amd)
 summary(emm_nutrient$contrasts)
 ```
 
-# Summary of Findings
+# 5.1 Summary of Findings
 
 - **Nutrient availability was the strongest fixed effect** in the model. Plants grown under high nutrients produced significantly more fruits than those under low nutrients.
 
@@ -666,7 +696,7 @@ summary(emm_nutrient$contrasts)
 
 - **Region alone was not significant**, but its role became important through interactions with other predictors.
 
-# Summary of Findings
+# 5.2 Summary of Findings
 
 - The **Region × Nutrient interaction was significant**, showing that the effect of nutrient availability differed across regions.
 
@@ -676,7 +706,7 @@ summary(emm_nutrient$contrasts)
 
 - Overall, fruit production in *Arabidopsis* was shaped by both **experimental treatments** and **hierarchical biological differences** among populations and maternal seed families.
 
-# Limitations \& Future Work
+# 5.3 Limitations \& Future Work
 
 - Residual diagnostics suggested **some heteroscedasticity across regions and status groups**, although the variance differences were not extreme.
 
@@ -686,7 +716,7 @@ summary(emm_nutrient$contrasts)
 
 - Additional analyses could explore **interactions involving AMD**, assess alternative variance structures, and use expanded data to better understand variation across populations and genotypes.
 
-# References
+# 5.4 References
 
 - Banta, J. A., Stevens, M. H. H., & Pigliucci, M. (2010).  
   *A comprehensive test of the “limiting resources” framework applied to plant tolerance to apical meristem damage*.  
