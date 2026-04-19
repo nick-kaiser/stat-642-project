@@ -718,7 +718,7 @@ lattice::qqmath(fit_reduced, main = "Normal Q-Q plot")
 # 4.4 Assumption Checks: Variance
 
 - Scale-location plot:
-  - Slight increase in variance at higher fitted values  
+  - Slight increase in variance at moderate fitted values  
   - No severe heteroscedasticity pattern  
 
 ```{r, fig.width=5, fig.height=2.8, out.width='80%', fig.align='center', echo=FALSE}
