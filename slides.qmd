@@ -4,7 +4,7 @@ subtitle: ""
 author: ""
 date: ""
 metadata:
-  title: "Arabidopsis Growth Under Nutrients and Damage"
+  title: "Arabidopsis Fruit Production Under Nutrients and Damage"
 format:
   beamer:
     theme: "Madrid"
@@ -59,10 +59,10 @@ were published in **Banta JA, Stevens MHH, Pigliucci M (2010). “A comprehensiv
 of the ’limiting resources’ framework applied to plant tolerance to apical
 meristem damage.” Oikos, 119(2), 359-369. doi:10.1111/j.16000706.2009.17726.x.**
 
-Banta et al investigated how different resources **(nutrients, water, and light)**
+Banta et al investigated how different resources **(nutrients and light)**
 affect the ability of Arabidopsis plants from 
 three different regions to tolerate damage to their **apical 
-meristem damage (AMD)** in order to test the "limiting resources" framework. The "limiting resources"  framework was an accepted model in the field, describing 
+meristem (AMD)** in order to test the "limiting resources" framework. The "limiting resources"  framework was an accepted model in the field, describing 
 the growth response of plants to AMD. The dataset contains measurements of plant growth and reproduction under various treatment conditions.
 
 **Sample size:** $n = 625$
@@ -87,7 +87,7 @@ Our research questions in analyzing this dataset are as follows:
 2. Are there significant interactions between region, nutrient levels, and transplant sources in 
 determining the plant's response to AMD?
 
-3. How much of the variability in plant response to AMD can be attributed to differences between 
+3. How much of the variability in fruit production can be attributed to differences between 
 populations and maternal seed families within regions?
 
 # 1.3 Variables
@@ -294,7 +294,7 @@ abline(v = optimal_lambda, lty = 2)
 ::: 
 :::
 
-# 3.1 Analyse
+# 3.1 Analysis
 
 **Type III ANOVA**
 
@@ -727,7 +727,7 @@ plot(fit_reduced,
 
 :::
 
-# 4.2 Variance Checks & Conclusion
+# 4.2 Variance Checks
 
 - Brown–Forsythe (Levene) test:
   - Some heteroscedasticity across Region and Status
@@ -874,7 +874,7 @@ kable(
 )
 ```
 
-**Significant Effectss**
+**Significant Effects**
 
 - Significant: **Nutrients, AMD, Rack, and Status**  
 - Significant interactions:  
@@ -940,7 +940,7 @@ production. Plants grown in the presence of high nutrients and in the absence of
 with other predictors (Nutrients and Status).
 
 - Overall, fruit production in *Arabidopsis* was shaped by both **experimental treatments** 
-and **hierarchical biological differences** among populations and maternal seed families.
+and **hierarchical biological differences** among regions and populations.
 
 # 5.2 Research Question Conclusions
 
@@ -948,11 +948,13 @@ and **hierarchical biological differences** among populations and maternal seed 
 
     - No significant interactions between AMD and Region, Nutrients, or Status were observed, suggesting the effect of AMD on fruit production was consistent across these factors.
 
-2. Are there significant interactions between region, nutrient levels, and transplant sources in determining the a plant's fruit production?
+2. Are there significant interactions between region, nutrient levels, and transplant sources in determining a plant's fruit production?
 
     - Yes, significant interactions were found between Region × Nutrients and Region × Status, indicating that the effects of nutrient availability and transplant source varied across regions.
 
 3. How much of the variability in plant response to AMD can be attributed to differences between populations and maternal seed families within regions?
+
+    - Approximately 16% of the variance in fruit production was attributable to differences between populations, while the variance attributed to maternal seed families was not significant.
 
 # 5.3 Limitations \& Future Work
 
@@ -961,8 +963,6 @@ and **hierarchical biological differences** among populations and maternal seed 
 - Because the response variable is a **count with many zeros**, transformation-based Gaussian modeling may not fully capture the data structure.
 
 - While the linear mixed-effects model was interpretable and supported the main conclusions, future work should further investigate **generalized mixed models for count outcomes**.
-
-- Additional analyses could explore **interactions involving AMD**, assess alternative variance structures, and use expanded data to better understand variation across populations and genotypes.
 
 # 5.4 References
 
