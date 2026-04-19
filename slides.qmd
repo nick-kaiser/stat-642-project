@@ -183,12 +183,19 @@ We fit a linear mixed-effects model (LMM) with total fruits
 (-transformed) as the response.
 
 $$
-Y_{ijklmno} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
+\begin{aligned}
+Y_{ijklmno} = \mu &+ \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m \\
+&+ (\alpha\beta)_{ij} + (\alpha\phi)_{im} + (\beta\phi)_{jm} + (\alpha\beta\phi)_{ijm} \\
+&+ (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + (\phi\gamma)_{mk} \\
+&+ P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
+\end{aligned}
 $$
 
-Fixed effects:
+Main effects:
 
 - Region, Nutrients, AMD, Status (nuisance), Rack (nuisance)
+
+Interactions of interest:
 
 - Region x Nutrients x AMD
 
@@ -196,9 +203,11 @@ Fixed effects:
 
 - Nutrients × AMD
 
-- AMD x Status
-
 - Region × Nutrients
+
+Nuisance interactions:
+
+- AMD x Status
 
 - Region × Status
 
@@ -215,8 +224,12 @@ Fixed effects:
 - $\delta_l$: effect of Rack ($l = 1, 2$)
 - $\phi_m$: effect of AMD ($m = 1, 2$; clipped, unclipped)
 - $(\alpha\beta)_{ij}$: Region $\times$ Nutrients interaction
-- $(\alpha\gamma)_{ik}$: Region $\times$ Status interaction
-- $(\beta\gamma)_{jk}$: Nutrients $\times$ Status interaction
+- $(\alpha\phi)_{im}$: Region $\times$ AMD interaction
+- $(\beta\phi)_{jm}$: Nutrients $\times$ AMD interaction
+- $(\alpha\beta\phi)_{ijm}$: Region $\times$ Nutrients $\times$ AMD interaction
+- $(\alpha\gamma)_{ik}$: Region $\times$ Status interaction (nuisance)
+- $(\beta\gamma)_{jk}$: Nutrients $\times$ Status interaction (nuisance)
+- $(\phi\gamma)_{mk}$: AMD $\times$ Status interaction (nuisance)
 
 **Random effects:**
 
@@ -245,13 +258,14 @@ The following additional assumptions are made due to the experimental design:
 :::columns
 :::column
 **Overview**
-- Fit full LMM with all two-way interactions:
-  - Region × Nutrients
-  - Region × Status
-  - Nutrients × Status  
+- Fit full LMM including:
+  - Interactions of interest: Region × Nutrients, Region × AMD,
+    Nutrients × AMD, Region × Nutrients × AMD
+  - Nuisance interactions: Region × Status, Nutrients × Status,
+    AMD × Status
 
-- Use backward elimination (LRT, \( \alpha = 0.05 \))  
-  → obtain reduced model  
+- Use backward elimination (LRT, \( \alpha = 0.05 \))
+  → obtain reduced model
 
 - Model fitted with:
   - `lme4::lmer()`  
@@ -260,7 +274,7 @@ The following additional assumptions are made due to the experimental design:
 **Response Transformation**
 
 - Use Box-Cox to assess appropriate transformation  
-- Result: $\lambda \approx 0.07 \approx 0$ → log transform 
+- Result: $\lambda \approx 0.06 \approx 0$ → log transform 
 - Use $\log(\text{Total Fruits} + 1)$ to handle zeros
 :::
 :::column
@@ -268,7 +282,8 @@ The following additional assumptions are made due to the experimental design:
 ```{r, fig.width=5, fig.height=5, out.width='100%', echo=FALSE, message=FALSE, warning=FALSE}
 # Initial model for Box-Cox assessment
 fit_init <- lm(
-  (total.fruits + 1) ~ reg * nutrient * status + amd + rack,
+  (total.fruits + 1) ~ reg * nutrient * amd +
+    reg * status + nutrient * status + amd * status + rack,
   data = Arabidopsis
 )
 
@@ -293,8 +308,9 @@ Arabidopsis$rack <- factor(Arabidopsis$rack)
 Arabidopsis$logp1_fruits <- log(Arabidopsis$total.fruits + 1)
 
 fit_full <- lmer(
-  logp1_fruits ~ reg * nutrient + reg * status + nutrient * status +
-    amd + rack + (1 | popu) + (1 | gen),
+  logp1_fruits ~ reg * nutrient * amd +
+    reg * status + nutrient * status + amd * status +
+    rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
 
