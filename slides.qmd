@@ -105,37 +105,55 @@ populations and maternal seed families within regions?
 
 # 1.4 Experimental Design
 
-- **Study organism:** *Arabidopsis thaliana*
-- **Sampling structure:** maternal seed families collected from populations in **3 regions** (Northern Spain, Netherlands, Southern Sweden)
+::: columns
 
-- **Hierarchical sampling structure:**
-  - Region
-  - Population nested within Region (four populations from SP, two from NL, and three from SW)
-  - Genotype (maternal seed family) nested within Population
+::: column
 
-- **Experimental factors of interest:**
-  - **Nutrients:** low (1 prill) vs high (8 prills)
-  - **AMD:** clipped vs unclipped
-  - **Region:** NL, SP, SW
+**Study organism:** *Arabidopsis thaliana*
 
-- **Random factors:**
-  - **Population:** 9 populations nested within regions
-  - **Genotype:** 24 maternal seed families nested within populations
+**Sampling hierarchy**
 
-- **Nuisance factors:**
-  - **Rack:** 2 light racks
-  - **Status**: Normal, Petri Plate, Transplant (reflecting source of plant material)
+- 3 regions: NL, SP, SW
+- 9 populations nested in Region (4 SP, 2 NL, 3 SW)
+- 24 maternal seed families nested in Population
 
-- **Experimental details:**
+**Treatment factors**
 
-  - Seeds germinated in petri dishes, then planted in pots
-  - Failed germinations sometimes replaced by seedlings of the same maternal family
-  - Clipping applied at bolting stage to simulate apical meristem damage
+- Nutrients: 1 prill (low) vs 8 prills (high)
+- AMD: clipped vs unclipped
+- Region: NL, SP, SW (fixed)
 
-- **Design Structure:** A 2 x 2 factorial treatment structure (Nutrients × AMD) applied to plants from a nested sampling hierarchy (Genotypes within populations within regions), with additional fixed effects (Status, Rack) as nuisance factors. Genotype and population are modeled as random
-effects while Region is treated as a fixed effect.
-- **Sample size:** \(n = 625\)
-- **Average replication:** about 6.5 plants per seed-family-by-treatment combination
+**Nuisance factors (fixed)**
+
+- Rack: 2 light racks
+- Status: Normal / Petri.Plate / Transplant
+
+:::
+
+::: column
+
+**Random factors**
+
+- Population (9 levels)
+- Genotype / maternal seed family (24 levels)
+
+**Design structure**
+
+A 2 × 2 factorial treatment (Nutrients × AMD) crossed with a
+3-level sampling hierarchy. Region is fixed; Population and
+Genotype are random.
+
+**Procedure**
+
+- Seeds germinated in petri dishes, then potted
+- Failed germinations replaced with same-family seedlings
+- Clipping applied at bolting stage
+
+**Scale:** \(n = 625\); ≈ 6.5 plants per seed-family × treatment cell
+
+:::
+
+:::
 
 # 1.5 Data Exploration & Results
 
@@ -171,15 +189,12 @@ ggplot(Arabidopsis %>% filter(total.fruits < 10), aes(x = total.fruits)) +
 
 **Why a Mixed-Effects Model?**
 
-A mixed-effects model is appropriate because we have a combination of fixed and random effects 
-with hierarchical nesting.
+Fixed and random effects are combined to reflect the nesting:
+plants within **genotypes**, genotypes within **populations**,
+populations within **regions**.
 
-- Plants are grouped within **genotypes**
-- Genotypes are grouped within **populations**
-- Populations are grouped within **regions**
-
-We fit a linear mixed-effects model (LMM) with total fruits
-(log-transformed) as the response.
+Response: $\log(\text{Total Fruits} + 1)$; fit via
+`lme4::lmer` with Satterthwaite F-tests (`lmerTest`).
 
 $$
 \begin{aligned}
@@ -190,51 +205,49 @@ Y_{ijklmno} = \mu &+ \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m \\
 \end{aligned}
 $$
 
-Main effects:
-
-- Region, Nutrients, AMD, Status (nuisance), Rack (nuisance)
-
-Interactions of interest:
-
-- Region x Nutrients x AMD
-
-- Region × AMD
-
-- Nutrients × AMD
-
-- Region × Nutrients
-
-Nuisance interactions:
-
-- AMD x Status
-
-- Region × Status
-
-- Nutrients × Status
+Term definitions appear on the next slide.
 
 # 2.2 Model Setup
 
-**Fixed effects:**
+::: columns
+
+::: column
+
+**Fixed main effects**
 
 - $\mu$: overall intercept
-- $\alpha_i$: effect of Region ($i = 1, 2, 3$; NL, SP, SW)
-- $\beta_j$: effect of Nutrients ($j = 1, 2$; low, high)
-- $\gamma_k$: effect of Status/Transplant ($k = 1, 2, 3$; Normal, Petri.Plate, Transplant)
-- $\delta_l$: effect of Rack ($l = 1, 2$)
-- $\phi_m$: effect of AMD ($m = 1, 2$; clipped, unclipped)
-- $(\alpha\beta)_{ij}$: Region $\times$ Nutrients interaction
-- $(\alpha\phi)_{im}$: Region $\times$ AMD interaction
-- $(\beta\phi)_{jm}$: Nutrients $\times$ AMD interaction
-- $(\alpha\beta\phi)_{ijm}$: Region $\times$ Nutrients $\times$ AMD interaction
-- $(\alpha\gamma)_{ik}$: Region $\times$ Status interaction (nuisance)
-- $(\beta\gamma)_{jk}$: Nutrients $\times$ Status interaction (nuisance)
-- $(\phi\gamma)_{mk}$: AMD $\times$ Status interaction (nuisance)
+- $\alpha_i$: Region ($i=1,2,3$; NL, SP, SW)
+- $\beta_j$: Nutrients ($j=1,2$; low, high)
+- $\phi_m$: AMD ($m=1,2$; clipped, unclipped)
+- $\gamma_k$: Status ($k=1,2,3$)
+- $\delta_l$: Rack ($l=1,2$)
 
-**Random effects:**
+**Random effects**
 
-- $P_{n(i)} \sim N(0, \sigma^2_P)$: Population $n$ nested within Region $i$
-- $F_{o(ni)} \sim N(0, \sigma^2_F)$: Maternal Seed Family $o$ nested within Population and Region
+- $P_{n(i)} \sim N(0, \sigma^2_P)$: Population in Region
+- $F_{o(ni)} \sim N(0, \sigma^2_F)$: Seed family in Population
 - $\varepsilon_{ijklmno} \sim N(0, \sigma^2)$: residual error
+
+:::
+
+::: column
+
+**Treatment interactions**
+
+- $(\alpha\beta)_{ij}$: Region × Nutrients
+- $(\alpha\phi)_{im}$: Region × AMD
+- $(\beta\phi)_{jm}$: Nutrients × AMD
+- $(\alpha\beta\phi)_{ijm}$: Region × Nutrients × AMD
+
+**Nuisance interactions**
+
+- $(\alpha\gamma)_{ik}$: Region × Status
+- $(\beta\gamma)_{jk}$: Nutrients × Status
+- $(\phi\gamma)_{mk}$: AMD × Status
+
+:::
+
+:::
 
 # 2.3 Assumptions
 
@@ -330,171 +343,127 @@ knitr::kable(
 
 # 3.2 Model Reduction
 
-**Backward elimination of non-significant terms** (LRT, $\alpha = 0.05$)
-
-- Test **Nutrients × Status** → not significant, drop
-- Test **AMD × Status** → not significant, drop
-- Test **Region × Nutrients × AMD** (3-way) → not significant, drop
-- Test **Region × AMD** → not significant, drop
-- Test **Nutrients × AMD** → not significant, drop
-
-Region × Status and Region × Nutrients remain in the model.
-
-**Final Reduced Model**
+Backward elimination via LRT ($\alpha = 0.05$) on ML-fit models. Five
+interactions are tested and dropped; Region × Nutrients and
+Region × Status are retained.
 
 ```{r}
 #| echo: false
+#| include: false
 
 # Backward elimination: drop non-significant interactions via LRT
-# Start by testing nutrient:status (highest p-value in full model ANOVA)
 fit_no_nut_status <- lmer(
   logp1_fruits ~ reg * nutrient * amd +
     reg * status + amd * status +
     rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
-
-# LRT comparing full vs reduced (must use ML, not REML)
 fit_full_ml <- update(fit_full, REML = FALSE)
 fit_no_nut_status_ml <- update(fit_no_nut_status, REML = FALSE)
-cat("=== LRT: drop Nutrients x Status ===\n")
 lrt1 <- anova(fit_no_nut_status_ml, fit_full_ml)
 
-# anova(fit_no_nut_status, type = 3)
-
-# nutrient:status is non-significant (p = 0.64), so drop it.
-# Next: test amd:status in the updated model
 fit_no_amd_status <- lmer(
   logp1_fruits ~ reg * nutrient * amd +
     reg * status +
     rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
-
-# LRT comparing reduced model with amd:status eliminated
 fit_no_amd_status_ml <- update(fit_no_amd_status, REML = FALSE)
-#cat("\n=== LRT: drop AMD x Status ===\n")
 lrt2 <- anova(fit_no_nut_status_ml, fit_no_amd_status_ml)
 
-# anova(fit_no_amd_status, type = 3)
-
-# amd:status is non-significant (p = 0.62), so drop it.
-# Next: test removing the reg:nutrient:amd three-way interaction
-
 fit_no_three_way <- lmer(
-  logp1_fruits ~ reg * nutrient +
-    nutrient * amd +
-    reg * amd +
-    reg * status +
-    rack + (1 | popu) + (1 | gen),
+  logp1_fruits ~ reg * nutrient + nutrient * amd + reg * amd +
+    reg * status + rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
-
-# LRT comparing reduced model with reg:nutrient:amd eliminated
 fit_no_three_way_ml <- update(fit_no_three_way, REML = FALSE)
-# cat("\n=== LRT: drop reg:nutrient:amd ===\n")
 lrt3 <- anova(fit_no_three_way_ml, fit_no_amd_status_ml)
 
-# anova(fit_no_three_way, type = 3)
-
-# 3FI is non-significant (p = 0.26), so drop it
-# Now test removing reg:amd interaction
-
 fit_no_reg_amd <- lmer(
-  logp1_fruits ~ reg * nutrient +
-    nutrient * amd +
-    reg * status +
-    rack + (1 | popu) + (1 | gen),
+  logp1_fruits ~ reg * nutrient + nutrient * amd +
+    reg * status + rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
-
-# LRT comparing reduced model with reg:amd eliminated
 fit_no_reg_amd_ml <- update(fit_no_reg_amd, REML = FALSE)
-# cat("\n=== LRT: drop reg:amd ===\n")
 lrt4 <- anova(fit_no_three_way_ml, fit_no_reg_amd_ml)
 
-# anova(fit_no_reg_amd, type = 3)
-
-# reg:amd non-significant (p = 0.81), so drop it
-# Now test removing nutrient:amd interaction
-
 fit_no_nut_amd <- lmer(
-  logp1_fruits ~ reg * nutrient +
-    amd +
-    reg * status +
-    rack + (1 | popu) + (1 | gen),
+  logp1_fruits ~ reg * nutrient + amd +
+    reg * status + rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
-
-# LRT comparing reduced model with nutrient:amd eliminated
 fit_no_nut_amd_ml <- update(fit_no_nut_amd, REML = FALSE)
-# cat("\n=== LRT: drop nutrient:amd ===\n")
 lrt5 <- anova(fit_no_reg_amd_ml, fit_no_nut_amd_ml)
-
-anova(fit_no_nut_amd, type = 3)
-
-# After dropping nutrient:amd, all remaining fixed effects are either
-# significant or must be retained to preserve hierarchy. Therefore, we
-# stop the backward elimination process here.
 
 fit_reduced <- fit_no_nut_amd
 anova_reduced <- anova(fit_reduced, type = 3)
-#cat("\n=== Reduced Model Summary ===\n")
-#summary(fit_reduced)
-#cat("\n=== Reduced Model ANOVA ===\n")
-#anova(fit_reduced, type = 3)
 
-# ---- Build clean LRT summary table ----
-# One row per nested comparison performed during backward elimination.
-# Tests are listed in the order they were performed; each row drops one
-# interaction from the model selected in the previous row.
+# ---- LRT summary ----
 lrts <- list(lrt1, lrt2, lrt3, lrt4, lrt5)
 lrt_summary <- data.frame(
   Step = seq_along(lrts),
   Test = c(
-    "Drop Nutrients × Status",
-    "Drop AMD × Status",
-    "Drop Region × Nutrients × AMD",
-    "Drop Region × AMD",
-    "Drop Nutrients × AMD"
+    "Nutrients × Status",
+    "AMD × Status",
+    "Region × Nutrients × AMD",
+    "Region × AMD",
+    "Nutrients × AMD"
   ),
-  Chisq   = sapply(lrts, function(x) x$Chisq[2]),
+  Chisq   = round(sapply(lrts, function(x) x$Chisq[2]), 2),
   Df      = sapply(lrts, function(x) x$Df[2]),
-  P_Value = sapply(lrts, function(x) x$`Pr(>Chisq)`[2]),
-  Decision = "Drop"
+  P_Value = signif(sapply(lrts, function(x) x$`Pr(>Chisq)`[2]), 3)
 )
 
-lrt_summary$Chisq   <- round(lrt_summary$Chisq, 3)
-lrt_summary$P_Value <- signif(lrt_summary$P_Value, 3)
-
-# ---- Build reduced-model ANOVA table ----
+# ---- Reduced-model ANOVA ----
 anova_tbl <- as.data.frame(anova_reduced)
 anova_tbl$Effect <- rownames(anova_tbl)
 rownames(anova_tbl) <- NULL
-
 anova_tbl <- anova_tbl %>%
-  dplyr::select(Effect, `NumDF`, `DenDF`, `F value`, `Pr(>F)`) %>%
+  dplyr::select(Effect, NumDF, DenDF, `F value`, `Pr(>F)`) %>%
   dplyr::mutate(
-    DenDF = round(DenDF, 2),
+    DenDF = round(DenDF, 1),
     `F value` = round(`F value`, 2),
     `Pr(>F)` = signif(`Pr(>F)`, 3)
   )
+```
 
-# ---- Print nicely ----
-cat("**Backward elimination (LRT, ML fit)**\n\n")
+\small
+
+::: columns
+
+::: column
+
+**Backward elimination (LRT)**
+
+```{r}
+#| echo: false
 kable(
   lrt_summary,
-  align = "clcccc",
-  col.names = c("Step", "Test", "Chisq", "Df", "p-value", "Decision")
+  align = "clccc",
+  col.names = c("Step", "Interaction dropped", "Chisq", "Df", "p"),
+  row.names = FALSE
 )
+```
 
-cat("\n\n**Reduced model: Type III tests**\n\n")
+:::
+
+::: column
+
+**Reduced model: Type III tests**
+
+```{r}
+#| echo: false
 kable(
   anova_tbl,
   align = "lcccc",
-  col.names = c("Effect", "df1", "df2", "F", "p-value")
+  col.names = c("Effect", "df1", "df2", "F", "p"),
+  row.names = FALSE
 )
 ```
+
+:::
+
+:::
 
 # 3.3 Model Reduction via AIC / BIC
 
