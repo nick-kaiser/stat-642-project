@@ -900,6 +900,85 @@ kable(
 
 :::
 
+# 4.8 Interaction Plots
+
+**Visualizing Significant Interactions**
+
+The interaction plots below illustrate how the effects of **Nutrients** and **Status** on fruit production vary across **Regions**.
+
+::: columns
+::: column
+**Region × Nutrients**
+
+```{r, fig.width=4.5, fig.height=3.5, out.width='100%', echo=FALSE}
+# Region × Nutrients interaction
+Arabidopsis %>%
+  group_by(reg, nutrient) %>%
+  summarise(
+    mean_fruits = mean(logp1_fruits),
+    se = sd(logp1_fruits) / sqrt(n()),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = factor(nutrient, labels = c("Low (1 prill)", "High (8 prills)")),
+             y = mean_fruits,
+             color = reg,
+             group = reg)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_fruits - se, ymax = mean_fruits + se),
+                width = 0.1, linewidth = 0.8) +
+  labs(x = "Nutrient Level",
+       y = "Mean log(Total Fruits + 1)",
+       color = "Region") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        text = element_text(size = 10))
+```
+
+- All regions benefit from high nutrients
+- SP shows the steepest increase
+- SW shows the smallest response
+
+:::
+
+::: column
+
+**Region x Status**
+
+```{r, fig.width=4.5, fig.height=3.5, out.width='100%', echo=FALSE}
+# Region × Status interaction
+Arabidopsis %>%
+  group_by(reg, status) %>%
+  summarise(
+    mean_fruits = mean(logp1_fruits),
+    se = sd(logp1_fruits) / sqrt(n()),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = status,
+             y = mean_fruits,
+             color = reg,
+             group = reg)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_fruits - se, ymax = mean_fruits + se),
+                width = 0.15, linewidth = 0.8) +
+  labs(x = "Plant Status",
+       y = "Mean log(Total Fruits + 1)",
+       color = "Region") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        text = element_text(size = 10),
+        axis.text.x = element_text(angle = 15, hjust = 1))
+```
+
+- SP: Normal plants outperform Petri.Plate
+- SW: Petri.Plate plants have lowest production
+- NL: Less differentiation among groups
+
+:::
+
+:::
+
 # 5.1 Summary of Findings
 
 - **Nutrients, AMD, Rack, and Status** were all found to have significant impacts on fruit 
