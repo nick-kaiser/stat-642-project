@@ -34,6 +34,16 @@ library(glmmTMB)
 library(DHARMa)
 library(emmeans)
 
+# Sum-to-zero contrasts so Type III ANOVA main-effect tests are
+# averaged over factor levels rather than evaluated at a reference level.
+options(contrasts = c("contr.sum", "contr.poly"))
+
+# Coerce categorical predictors to factors up front so every model
+# (Box-Cox lm, full LMM, NB GLMM) uses the same parameterization.
+Arabidopsis$nutrient     <- factor(Arabidopsis$nutrient)
+Arabidopsis$rack         <- factor(Arabidopsis$rack)
+Arabidopsis$logp1_fruits <- log(Arabidopsis$total.fruits + 1)
+
 ```
 
 # Arabidopsis Growth Under Nutrients and Damage {.center .vcenter}
@@ -125,8 +135,8 @@ populations and maternal seed families within regions?
 
 **Nuisance factors (fixed)**
 
-- Rack: 2 light racks
-- Status: Normal / Petri.Plate / Transplant
+- Rack: 2 light racks (interactions are not considered)
+- Status: Normal / Petri.Plate / Transplant (interactions are considered)
 
 :::
 
@@ -313,10 +323,6 @@ abline(v = optimal_lambda, lty = 2)
 
 ```{r}
 #| echo: false
-
-Arabidopsis$nutrient <- factor(Arabidopsis$nutrient)
-Arabidopsis$rack <- factor(Arabidopsis$rack)
-Arabidopsis$logp1_fruits <- log(Arabidopsis$total.fruits + 1)
 
 fit_full <- lmer(
   logp1_fruits ~ reg * nutrient * amd +
@@ -1009,7 +1015,7 @@ and **hierarchical biological differences** among regions and populations.
 
     - Yes, significant interactions were found between Region × Nutrients and Region × Status, indicating that the effects of nutrient availability and transplant source varied across regions.
 
-3. How much of the variability in plant response to AMD can be attributed to differences between populations and maternal seed families within regions?
+3. How much of the variability in fruit production can be attributed to differences between populations and maternal seed families within regions?
 
     - Approximately 16% of the variance in fruit production was attributable to differences between populations, while the variance attributed to maternal seed families was not significant.
 
