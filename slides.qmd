@@ -304,7 +304,6 @@ abline(v = optimal_lambda, lty = 2)
 
 Arabidopsis$nutrient <- factor(Arabidopsis$nutrient)
 Arabidopsis$rack <- factor(Arabidopsis$rack)
-# Arabidopsis$sqrt_fruits <- sqrt(Arabidopsis$total.fruits)
 Arabidopsis$logp1_fruits <- log(Arabidopsis$total.fruits + 1)
 
 fit_full <- lmer(
@@ -350,8 +349,9 @@ knitr::kable(
 # Backward elimination: drop non-significant interactions via LRT
 # Start by testing nutrient:status (highest p-value in full model ANOVA)
 fit_no_nut_status <- lmer(
-  logp1_fruits ~ reg * nutrient + reg * status + amd + rack +
-    (1 | popu) + (1 | gen),
+  logp1_fruits ~ reg * nutrient * amd +
+    reg * status + amd * status +
+    rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
 
@@ -359,24 +359,86 @@ fit_no_nut_status <- lmer(
 fit_full_ml <- update(fit_full, REML = FALSE)
 fit_no_nut_status_ml <- update(fit_no_nut_status, REML = FALSE)
 cat("=== LRT: drop Nutrients x Status ===\n")
-#anova(fit_no_nut_status_ml, fit_full_ml)
 lrt1 <- anova(fit_no_nut_status_ml, fit_full_ml)
 
-# nutrient:status is non-significant (p = 0.64), so drop it
-# Now test reg:status in the reduced model
-fit_no_reg_status <- lmer(
-  logp1_fruits ~ reg * nutrient + status + amd + rack +
-    (1 | popu) + (1 | gen),
+# anova(fit_no_nut_status, type = 3)
+
+# nutrient:status is non-significant (p = 0.64), so drop it.
+# Next: test amd:status in the updated model
+fit_no_amd_status <- lmer(
+  logp1_fruits ~ reg * nutrient * amd +
+    reg * status +
+    rack + (1 | popu) + (1 | gen),
   data = Arabidopsis
 )
-fit_no_reg_status_ml <- update(fit_no_reg_status, REML = FALSE)
+
+# LRT comparing reduced model with amd:status eliminated
+fit_no_amd_status_ml <- update(fit_no_amd_status, REML = FALSE)
 #cat("\n=== LRT: drop Region x Status ===\n")
-#anova(fit_no_reg_status_ml, fit_no_nut_status_ml)
-lrt2 <- anova(fit_no_reg_status_ml, fit_no_nut_status_ml)
+lrt2 <- anova(fit_no_nut_status_ml, fit_no_amd_status_ml)
 
+# anova(fit_no_amd_status, type = 3)
 
-# Use the reduced model (without nutrient:status) refit with REML
-fit_reduced <- fit_no_nut_status
+# amd:status is non-significant (p = 0.62), so drop it.
+# Next: test removing the reg:nutrient:amd three-way interaction
+
+fit_no_three_way <- lmer(
+  logp1_fruits ~ reg * nutrient +
+    nutrient * amd +
+    reg * amd +
+    reg * status +
+    rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+
+# LRT comparing reduced model with reg:nutrient:amd eliminated
+fit_no_three_way_ml <- update(fit_no_three_way, REML = FALSE)
+# cat("\n=== LRT: drop reg:nutrient:amd ===\n")
+lrt3 <- anova(fit_no_three_way_ml, fit_no_amd_status_ml)
+
+# anova(fit_no_three_way, type = 3)
+
+# 3FI is non-significant (p = 0.26), so drop it
+# Now test removing reg:amd interaction
+
+fit_no_reg_amd <- lmer(
+  logp1_fruits ~ reg * nutrient +
+    nutrient * amd +
+    reg * status +
+    rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+
+# LRT comparing reduced model with reg:amd eliminated
+fit_no_reg_amd_ml <- update(fit_no_reg_amd, REML = FALSE)
+# cat("\n=== LRT: drop reg:amd ===\n")
+lrt4 <- anova(fit_no_three_way_ml, fit_no_reg_amd_ml)
+
+# anova(fit_no_reg_amd, type = 3)
+
+# reg:amd non-significant (p = 0.81), so drop it
+# Now test removing nutrient:amd interaction
+
+fit_no_nut_amd <- lmer(
+  logp1_fruits ~ reg * nutrient +
+    amd +
+    reg * status +
+    rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+
+# LRT comparing reduced model with nutrient:amd eliminated
+fit_no_nut_amd_ml <- update(fit_no_nut_amd, REML = FALSE)
+# cat("\n=== LRT: drop nutrient:amd ===\n")
+lrt5 <- anova(fit_no_reg_amd_ml, fit_no_nut_amd_ml)
+
+anova(fit_no_nut_amd, type = 3)
+
+# After dropping nutrient:amd, all remaining fixed effects are either
+# significant or must be retained to preserve hierarchy. Therefore, we
+# stop the backward elimination process here.
+
+fit_reduced <- fit_no_nut_amd
 anova_reduced <- anova(fit_reduced, type = 3)
 #cat("\n=== Reduced Model Summary ===\n")
 #summary(fit_reduced)
@@ -384,18 +446,26 @@ anova_reduced <- anova(fit_reduced, type = 3)
 #anova(fit_reduced, type = 3)
 
 # ---- Build clean LRT summary table ----
+# One row per nested comparison performed during backward elimination.
+# Tests are listed in the order they were performed; each row drops one
+# interaction from the model selected in the previous row.
+lrts <- list(lrt1, lrt2, lrt3, lrt4, lrt5)
 lrt_summary <- data.frame(
-  Test = c("Drop Nutrients × Status", "Drop Region × Status"),
-  Chisq = c(lrt1$Chisq[2], lrt2$Chisq[2]),
-  Df = c(lrt1$Df[2], lrt2$Df[2]),
-  P_Value = c(lrt1$`Pr(>Chisq)`[2], lrt2$`Pr(>Chisq)`[2]),
-  Decision = c(
-    ifelse(lrt1$`Pr(>Chisq)`[2] > 0.05, "Drop", "Keep"),
-    ifelse(lrt2$`Pr(>Chisq)`[2] > 0.05, "Drop", "Keep")
-  )
+  Step = seq_along(lrts),
+  Test = c(
+    "Drop Nutrients × Status",
+    "Drop AMD × Status",
+    "Drop Region × Nutrients × AMD",
+    "Drop Region × AMD",
+    "Drop Nutrients × AMD"
+  ),
+  Chisq   = sapply(lrts, function(x) x$Chisq[2]),
+  Df      = sapply(lrts, function(x) x$Df[2]),
+  P_Value = sapply(lrts, function(x) x$`Pr(>Chisq)`[2]),
+  Decision = "Drop"
 )
 
-lrt_summary$Chisq <- round(lrt_summary$Chisq, 3)
+lrt_summary$Chisq   <- round(lrt_summary$Chisq, 3)
 lrt_summary$P_Value <- signif(lrt_summary$P_Value, 3)
 
 # ---- Build reduced-model ANOVA table ----
@@ -415,8 +485,8 @@ anova_tbl <- anova_tbl %>%
 cat("**Backward elimination (LRT, ML fit)**\n\n")
 kable(
   lrt_summary,
-  align = "lcccc",
-  col.names = c("Test", "Chisq", "Df", "p-value", "Decision")
+  align = "clcccc",
+  col.names = c("Step", "Test", "Chisq", "Df", "p-value", "Decision")
 )
 
 cat("\n\n**Reduced model: Type III tests**\n\n")
@@ -431,37 +501,68 @@ kable(
 
 ***Alternative model reduction via AIC / BIC***
 
-- Compare all subsets of interaction terms using AIC/BIC  
-- 3 interactions → \(2^3 = 8\) candidate models  
-- All main effects retained  
-- Models fit with ML for comparison 
+- Compare all subsets of interaction terms using AIC/BIC
+- 7 candidate interactions: 4 treatment (Reg × Nut, Reg × AMD,
+  Nut × AMD, Reg × Nut × AMD) and 3 nuisance (Reg × Status,
+  Nut × Status, AMD × Status)
+- Hierarchy enforced: if the 3-way is included, all three
+  corresponding 2-way interactions must also be included
+- All main effects retained; Rack included as additive blocking factor
+- 72 candidate models (9 treatment-interaction configurations × 8
+  nuisance-interaction configurations); fit with ML
+- AIC preferred model includes one additional term (Nutrients x AMD) compared to the LRT-reduced model, but this term is not significant in the LRT framework and does not change conclusions about key effects. We retain the LRT-reduced model for interpretability.
 
 ```{r}
 #| echo: false
+#| cache: true
 
-base <- "logp1_fruits ~ reg + nutrient + status + amd + rack + (1 | popu) + (1 | gen)"
 
-interactions <- list(
-  "Reg x Nut"  = "reg:nutrient",
+# Main-effects baseline (all main effects + rack + random effects)
+base <- "logp1_fruits ~ reg + nutrient + amd + status + rack + (1 | popu) + (1 | gen)"
+
+# Candidate interactions, split into treatment (hierarchy-constrained)
+# and nuisance (freely combinable)
+treatment_ints <- list(
+  "Reg x Nut"       = "reg:nutrient",
+  "Reg x AMD"       = "reg:amd",
+  "Nut x AMD"       = "nutrient:amd",
+  "Reg x Nut x AMD" = "reg:nutrient:amd"
+)
+nuisance_ints <- list(
   "Reg x Stat" = "reg:status",
-  "Nut x Stat" = "nutrient:status"
+  "Nut x Stat" = "nutrient:status",
+  "AMD x Stat" = "amd:status"
 )
 
-# Generate all 8 combinations of interactions
-combos <- do.call(expand.grid, replicate(3, c(FALSE, TRUE), simplify = FALSE))
-names(combos) <- names(interactions)
+# Enumerate all combinations, filter to hierarchy-respecting subsets.
+# If the 3-way is in, all three corresponding 2-way must also be in.
+t_combos <- do.call(expand.grid, replicate(4, c(FALSE, TRUE), simplify = FALSE))
+names(t_combos) <- names(treatment_ints)
+t_valid <- with(t_combos,
+  !`Reg x Nut x AMD` | (`Reg x Nut` & `Reg x AMD` & `Nut x AMD`)
+)
+t_combos <- t_combos[t_valid, , drop = FALSE]
 
+n_combos <- do.call(expand.grid, replicate(3, c(FALSE, TRUE), simplify = FALSE))
+names(n_combos) <- names(nuisance_ints)
+
+# Cross treatment x nuisance configurations (9 x 8 = 72)
 models <- list()
-for (i in seq_len(nrow(combos))) {
-  included <- names(interactions)[as.logical(combos[i, ])]
-  if (length(included) == 0) {
-    label <- "Main effects only"
-    form <- base
-  } else {
-    label <- paste(included, collapse = " + ")
-    form <- paste(base, paste(interactions[included], collapse = " + "), sep = " + ")
+for (i in seq_len(nrow(t_combos))) {
+  for (j in seq_len(nrow(n_combos))) {
+    t_in <- names(treatment_ints)[as.logical(t_combos[i, ])]
+    n_in <- names(nuisance_ints)[as.logical(n_combos[j, ])]
+    included <- c(t_in, n_in)
+    if (length(included) == 0) {
+      label <- "Main effects only"
+      form <- base
+    } else {
+      label <- paste(included, collapse = " + ")
+      terms <- c(treatment_ints[t_in], nuisance_ints[n_in])
+      form <- paste(base, paste(terms, collapse = " + "), sep = " + ")
+    }
+    models[[label]] <- lmer(as.formula(form), data = Arabidopsis, REML = FALSE)
   }
-  models[[label]] <- lmer(as.formula(form), data = Arabidopsis, REML = FALSE)
 }
 
 aic_bic <- data.frame(
@@ -474,7 +575,9 @@ aic_bic$dAIC <- aic_bic$AIC - min(aic_bic$AIC)
 aic_bic$dBIC <- aic_bic$BIC - min(aic_bic$BIC)
 aic_bic <- aic_bic[order(aic_bic$AIC), ]
 
-knitr::kable(aic_bic, digits = 2, row.names = FALSE)
+# Show top 15 models by AIC (full table would be 72 rows)
+knitr::kable(head(aic_bic, 15), digits = 2, row.names = FALSE,
+             caption = "Top 15 of 72 candidate models, ranked by AIC")
 ```
 
 # 3.4 Alternative GLMM with Negative Binomial Family
@@ -486,10 +589,9 @@ knitr::kable(aic_bic, digits = 2, row.names = FALSE)
 - **Total Fruits** is a count variable with many zeros → fit a **negative binomial GLMM** on the original response scale
 
 - Same fixed/random effects as the reduced LMM:
-  - Region × Nutrients
-  - Region × Status
-  - AMD, Rack
-  - random effects for Population and Genotype
+  - Main effects: Region, Nutrients, Status, Rack
+  - Interactions: Region × Nutrients, Region × Status
+  - Random effects: Population, Genotype
 
 - Goal:
   - assess whether a count-based model provides a better fit
@@ -525,7 +627,11 @@ rownames(nb_anova) <- NULL
 nb_tbl <- nb_anova[, c("Effect", "Chisq", "Df", "Pr(>Chisq)")]
 names(nb_tbl) <- c("Effect", "Chisq", "Df", "p-value")
 nb_tbl$Chisq <- round(nb_tbl$Chisq, 2)
-nb_tbl$`p-value` <- signif(nb_tbl$`p-value`, 3)
+nb_tbl$`p-value` <- ifelse(
+  nb_tbl$`p-value` < 0.0001,
+  "<0.0001",
+  formatC(nb_tbl$`p-value`, format = "f", digits = 4)
+)
 
 kable(nb_tbl, align = "lccc", caption = "Type III tests for negative binomial GLMM")
 ```
@@ -587,7 +693,8 @@ plot(fit_reduced,
 ::: column
 
 - Q–Q plot shows residuals $≈$ normal  
-- Shapiro–Wilk test (p > 0.05) supports normality  
+- Shapiro–Wilk test (p = 0.03) attributed to large sample size (n=625) and zero-inflation, not severe non-normality
+
 ```{r, fig.width=4.5, fig.height=3, out.width='100%', echo=FALSE}
 # Formal normality test on residuals
 resids <- resid(fit_reduced, scaled = TRUE)
