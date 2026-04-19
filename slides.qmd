@@ -108,22 +108,33 @@ populations and maternal seed families within regions?
 
 - **Study organism:** *Arabidopsis thaliana*
 - **Sampling structure:** maternal seed families collected from populations in **3 regions** (Northern Spain, Netherlands, Southern Sweden)
-- **Hierarchical structure:**
+
+- **Hierarchical sampling structure:**
   - Region
   - Population nested within Region (four populations from NS, two from NL, and three from SS)
   - Genotype (maternal seed family) nested within Population
 
-- **Treatment factors:**
+- **Experimental factors of interest:**
   - **Nutrients:** low (1 prill) vs high (8 prills)
   - **AMD:** clipped vs unclipped
+  - **Region:** NL, SP, SW
+
+- **Random factors:**
+  - **Population:** 9 populations nested within regions
+  - **Genotype:** 24 maternal seed families nested within populations
+
+- **Nuisance factors:**
   - **Rack:** 2 light racks
-  - **Status:** Normal, Petri Plate, Transplant
+  - **Status**: Normal, Petri Plate, Transplant (reflecting source of plant material)
 
 - **Experimental details:**
+
   - Seeds germinated in petri dishes, then planted in pots
   - Failed germinations sometimes replaced by seedlings of the same maternal family
   - Clipping applied at bolting stage to simulate apical meristem damage
 
+- **Design Structure:** A 2 x 2 factorial treatment structure (Nutrients × AMD) applied to plants from a nested sampling hierarchy (Genotypes within populations within regions), with additional fixed effects (Status, Rack) as nuisance factors. Genotype and population are modeled as random
+effects while Region is treated as a fixed effect.
 - **Sample size:** \(n = 625\)
 - **Average replication:** about 6.5 plants per seed-family-by-treatment combination
 
@@ -161,22 +172,31 @@ ggplot(Arabidopsis %>% filter(total.fruits < 10), aes(x = total.fruits)) +
 
 **Why a Mixed-Effects Model?**
 
-A mixed-effects model is appropriate because the data have a
-**hierarchical structure**:
+A mixed-effects model is appropriate because we have a combination of fixed and random effects 
+with hierarchical nesting.
 
 - Plants are grouped within **genotypes**
 - Genotypes are grouped within **populations**
 - Populations are grouped within **regions**
 
 We fit a linear mixed-effects model (LMM) with total fruits
-(sqrt-transformed) as the response.
+(-transformed) as the response.
+
 $$
 Y_{ijklmno} = \mu + \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m + (\alpha\beta)_{ij} + (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
 $$
 
 Fixed effects:
 
-- Region, Nutrients, Status, Rack, AMD
+- Region, Nutrients, AMD, Status (nuisance), Rack (nuisance)
+
+- Region x Nutrients x AMD
+
+- Region × AMD
+
+- Nutrients × AMD
+
+- AMD x Status
 
 - Region × Nutrients
 
