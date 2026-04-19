@@ -4,7 +4,7 @@ subtitle: ""
 author: ""
 date: ""
 metadata:
-  title: "Arabidopsis Fruit Production Under Nutrients and Damage"
+  title: "Arabidopsis Fruit Production Response to Nutrients and Damage"
 format:
   beamer:
     theme: "Madrid"
@@ -46,7 +46,7 @@ Arabidopsis$logp1_fruits <- log(Arabidopsis$total.fruits + 1)
 
 ```
 
-# Arabidopsis Growth Under Nutrients and Damage {.center .vcenter}
+# Arabidopsis Fruit Production Response to Nutrients and Damage {.center .vcenter}
 
 **STAT 642 — Spring 2026**  
 **Team 11**

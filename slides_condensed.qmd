@@ -1,0 +1,985 @@
+---
+title: ""
+subtitle: ""
+author: ""
+date: ""
+metadata:
+  title: "Arabidopsis Fruit Production Response to Nutrients and Damage"
+format:
+  beamer:
+    theme: "Madrid"
+    colortheme: "default"
+    fonttheme: "structurebold"
+    navigation: horizontal
+    aspectratio: 169
+    fontsize: 10pt
+    title-slide: false
+    header-includes:
+      - \usepackage{booktabs}
+---
+
+```{r}
+
+source('R/load_arabidopsis.R')
+
+library(dplyr)
+library(ggplot2)
+library(MASS)
+library(car)
+library(ggplot2)
+library(lme4)
+library(lmerTest)
+library(knitr)
+library(glmmTMB)
+library(DHARMa)
+library(emmeans)
+
+# Sum-to-zero contrasts so Type III ANOVA main-effect tests are
+# averaged over factor levels rather than evaluated at a reference level.
+options(contrasts = c("contr.sum", "contr.poly"))
+
+# Coerce categorical predictors to factors up front so every model
+# (Box-Cox lm, full LMM, NB GLMM) uses the same parameterization.
+Arabidopsis$nutrient     <- factor(Arabidopsis$nutrient)
+Arabidopsis$rack         <- factor(Arabidopsis$rack)
+Arabidopsis$logp1_fruits <- log(Arabidopsis$total.fruits + 1)
+
+```
+
+# Arabidopsis Fruit Production Response to Nutrients and Damage {.center .vcenter}
+
+**STAT 642 — Spring 2026**
+**Team 11**
+
+**Outline**
+
+1. Introduction, Data, and Research Questions
+2. Model and Assumptions
+3. Model Reduction, Diagnostics, and Results
+4. Conclusions
+
+# 1. Introduction & Data
+
+::: columns
+
+::: {.column width="55%"}
+
+**Source:** `lme4::Arabidopsis` — a DoE experiment on *Arabidopsis thaliana*
+by the Center for Genomics and Systems Biology at NYU, published in
+Banta, Stevens, & Pigliucci (2010), *Oikos* 119(2): 359–369.
+
+Banta et al. investigated how **nutrients** and **apical meristem damage (AMD)**
+interact to affect fruit production in plants sampled from three European regions,
+as a test of the "limiting resources" framework.
+
+- **Sample size:** $n = 625$ plants
+- **Response:** Total Fruits (zero-heavy count)
+- **Unit of observation:** individual plant
+
+:::
+
+::: {.column width="45%"}
+
+```{r, fig.width=4.2, fig.height=3.0, out.width='100%', echo=FALSE}
+ggplot(Arabidopsis, aes(x = total.fruits)) +
+  geom_histogram(binwidth = 5, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Total Fruits",
+       x = "Total Fruits", y = "Count") +
+  theme_minimal()
+```
+
+:::
+
+:::
+
+# 2. Research Questions
+
+**Why it matters**
+
+- Plant response to AMD (herbivory / environmental stress) reflects growth, survival, adaptation
+- Prior literature is split: higher nutrients → higher *or* lower tolerance
+- This dataset enables a controlled test of that trade-off
+
+**Research Questions**
+
+1. How do the reproductive responses of *Arabidopsis thaliana* to AMD vary
+   across regions, nutrient levels, and transplant sources?
+2. Are there significant interactions between region, nutrient levels, and
+   transplant sources in determining fruit production?
+3. How much of the variability in fruit production can be attributed to
+   differences between populations and maternal seed families within regions?
+
+# 3. Variables & Experimental Design
+
+\footnotesize
+
+```{r}
+#| echo: false
+vars_tbl <- data.frame(
+  Variable = c("Total Fruits", "Region", "Nutrients", "AMD",
+               "Status", "Rack", "Population", "Genotype"),
+  Role = c("Response", "Fixed", "Fixed", "Fixed",
+           "Fixed", "Fixed (additive)", "Random", "Random"),
+  Levels = c("count per plant",
+             "NL, SP, SW",
+             "1 prill (low), 8 prills (high)",
+             "clipped, unclipped",
+             "Normal, Petri.Plate, Transplant",
+             "1, 2",
+             "9 levels, nested in Region",
+             "24 seed families, nested in Population")
+)
+kable(vars_tbl, align = "lll", col.names = c("Variable", "Role", "Levels / Description"))
+```
+
+\vspace{0.3em}
+
+**Design:** $2 \times 2$ factorial treatment (Nutrients × AMD) crossed with a
+3-level sampling hierarchy (Region → Population → Seed family).
+Status and Rack are fixed nuisance factors (Rack additive; Status interactions considered).
+$\approx$ 6.5 plants per seed-family × treatment cell.
+
+# 4. Model
+
+Fit via `lme4::lmer` with Satterthwaite F-tests (`lmerTest`).
+Response: $\log(\text{Total Fruits}+1)$.
+
+$$
+\begin{aligned}
+Y_{ijklmno} = \mu &+ \alpha_i + \beta_j + \gamma_k + \delta_l + \phi_m \\
+&+ (\alpha\beta)_{ij} + (\alpha\phi)_{im} + (\beta\phi)_{jm} + (\alpha\beta\phi)_{ijm} \\
+&+ (\alpha\gamma)_{ik} + (\beta\gamma)_{jk} + (\phi\gamma)_{mk} \\
+&+ P_{n(i)} + F_{o(ni)} + \varepsilon_{ijklmno}
+\end{aligned}
+$$
+
+::: columns
+
+::: {.column width="50%"}
+
+\footnotesize
+
+**Fixed effects**
+
+- $\mu$: intercept; $\alpha_i$: Region; $\beta_j$: Nutrients
+- $\phi_m$: AMD; $\gamma_k$: Status; $\delta_l$: Rack
+- Treatment interactions: $(\alpha\beta), (\alpha\phi), (\beta\phi), (\alpha\beta\phi)$
+- Nuisance interactions: $(\alpha\gamma), (\beta\gamma), (\phi\gamma)$
+
+:::
+
+::: {.column width="50%"}
+
+\footnotesize
+
+**Random effects**
+
+- $P_{n(i)} \sim N(0,\sigma^2_P)$: Population in Region
+- $F_{o(ni)} \sim N(0,\sigma^2_F)$: Seed family in Population
+- $\varepsilon_{ijklmno} \sim N(0,\sigma^2)$: residual
+
+:::
+
+:::
+
+# 5. Assumptions & Response Transformation
+
+::: columns
+
+::: {.column width="55%"}
+
+**LMM assumptions**
+
+1. **Linearity** (in predictors)
+2. **Independence** (conditional on random effects)
+3. **Normality** of random effects and residuals
+4. **Equal variance** of residuals
+5. **Correct specification** (fixed + random)
+6. **Random sampling within strata** (populations, families)
+7. **Exogeneity**: random effects uncorrelated with fixed effects
+
+**Response transformation**
+
+- Box-Cox $\lambda \approx 0.06 \approx 0 \Rightarrow \log$
+- Use $\log(\text{Total Fruits}+1)$ to handle zeros
+
+:::
+
+::: {.column width="45%"}
+
+```{r, fig.width=4, fig.height=3.5, out.width='100%', echo=FALSE, message=FALSE, warning=FALSE}
+fit_init <- lm(
+  (total.fruits + 1) ~ reg * nutrient * amd +
+    reg * status + nutrient * status + amd * status + rack,
+  data = Arabidopsis
+)
+
+bc <- boxcox(fit_init, lambda = seq(0, 1, by = 0.01))
+optimal_lambda <- bc$x[which.max(bc$y)]
+abline(v = optimal_lambda, lty = 2)
+```
+
+:::
+
+:::
+
+# 6. Model Reduction (LRT)
+
+```{r}
+#| echo: false
+#| include: false
+
+fit_full <- lmer(
+  logp1_fruits ~ reg * nutrient * amd +
+    reg * status + nutrient * status + amd * status +
+    rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+
+# Backward elimination: drop non-significant interactions via LRT
+fit_no_nut_status <- lmer(
+  logp1_fruits ~ reg * nutrient * amd +
+    reg * status + amd * status +
+    rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+fit_full_ml <- update(fit_full, REML = FALSE)
+fit_no_nut_status_ml <- update(fit_no_nut_status, REML = FALSE)
+lrt1 <- anova(fit_no_nut_status_ml, fit_full_ml)
+
+fit_no_amd_status <- lmer(
+  logp1_fruits ~ reg * nutrient * amd +
+    reg * status +
+    rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+fit_no_amd_status_ml <- update(fit_no_amd_status, REML = FALSE)
+lrt2 <- anova(fit_no_nut_status_ml, fit_no_amd_status_ml)
+
+fit_no_three_way <- lmer(
+  logp1_fruits ~ reg * nutrient + nutrient * amd + reg * amd +
+    reg * status + rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+fit_no_three_way_ml <- update(fit_no_three_way, REML = FALSE)
+lrt3 <- anova(fit_no_three_way_ml, fit_no_amd_status_ml)
+
+fit_no_reg_amd <- lmer(
+  logp1_fruits ~ reg * nutrient + nutrient * amd +
+    reg * status + rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+fit_no_reg_amd_ml <- update(fit_no_reg_amd, REML = FALSE)
+lrt4 <- anova(fit_no_three_way_ml, fit_no_reg_amd_ml)
+
+fit_no_nut_amd <- lmer(
+  logp1_fruits ~ reg * nutrient + amd +
+    reg * status + rack + (1 | popu) + (1 | gen),
+  data = Arabidopsis
+)
+fit_no_nut_amd_ml <- update(fit_no_nut_amd, REML = FALSE)
+lrt5 <- anova(fit_no_reg_amd_ml, fit_no_nut_amd_ml)
+
+fit_reduced <- fit_no_nut_amd
+anova_reduced <- anova(fit_reduced, type = 3)
+
+# ---- LRT summary ----
+lrts <- list(lrt1, lrt2, lrt3, lrt4, lrt5)
+lrt_summary <- data.frame(
+  Step = seq_along(lrts),
+  Test = c(
+    "Nutrients × Status",
+    "AMD × Status",
+    "Region × Nutrients × AMD",
+    "Region × AMD",
+    "Nutrients × AMD"
+  ),
+  Chisq   = round(sapply(lrts, function(x) x$Chisq[2]), 2),
+  Df      = sapply(lrts, function(x) x$Df[2]),
+  P_Value = signif(sapply(lrts, function(x) x$`Pr(>Chisq)`[2]), 3)
+)
+```
+
+\small
+
+Backward elimination via LRT ($\alpha = 0.05$) on ML-fit models;
+drop nuisance interactions first, then highest-order treatment interaction,
+then remaining treatment two-ways. **Region × Nutrients** and
+**Region × Status** are retained. AIC all-subsets search (72 models,
+hierarchy enforced) prefers adding Nutrients × AMD — not LRT-significant, so
+dropped for interpretability.
+
+```{r}
+#| echo: false
+kable(
+  lrt_summary,
+  align = "clccc",
+  col.names = c("Step", "Interaction dropped", "Chisq", "Df", "p"),
+  row.names = FALSE
+)
+```
+
+# 7. Diagnostics
+
+::: columns
+
+::: {.column width="55%"}
+
+```{r, fig.width=4.5, fig.height=1.8, out.width='100%', echo=FALSE}
+tight_pad <- list(
+  par.xlab.text = list(cex = 0.7),
+  par.ylab.text = list(cex = 0.7),
+  par.main.text = list(cex = 0.8),
+  layout.heights = list(
+    top.padding        = 0.2,
+    main.key.padding   = 0,
+    key.axis.padding   = 0,
+    axis.xlab.padding  = 0.2,
+    xlab.key.padding   = 0,
+    key.sub.padding    = 0,
+    bottom.padding     = 0.2
+  ),
+  layout.widths = list(
+    left.padding       = 0.2,
+    key.ylab.padding   = 0,
+    ylab.axis.padding  = 0.2,
+    axis.key.padding   = 0,
+    right.padding      = 0.2
+  )
+)
+
+plot(fit_reduced,
+     type = c("p", "smooth"),
+     col.line = 1,
+     main = list("Residuals vs Fitted", cex = 0.8),
+     scales = list(cex = 0.6),
+     par.settings = tight_pad)
+```
+
+```{r, fig.width=4.5, fig.height=1.8, out.width='100%', echo=FALSE}
+lattice::qqmath(fit_reduced,
+  main = list("Normal Q-Q", cex = 0.8),
+  scales = list(cex = 0.6),
+  par.settings = tight_pad)
+```
+
+:::
+
+::: {.column width="45%"}
+
+\footnotesize
+
+**Levene test on residuals**
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+lev_results <- data.frame(
+  Factor = c("Region", "Nutrients", "Status", "AMD"),
+  p_value = c(
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$reg)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$nutrient)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$status)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$amd)[1,3]
+  )
+)
+lev_results$p_value <- signif(lev_results$p_value, 3)
+kable(lev_results, align = "lc")
+```
+
+```{r, echo=FALSE}
+shapiro_p <- signif(
+  shapiro.test(resid(fit_reduced, scaled = TRUE))$p.value, 2
+)
+```
+
+**Summary**
+
+- Normality: Q–Q approximately linear; Shapiro p $\approx$ `r shapiro_p` reflects large $n$ + zero-inflation
+- Variance: mild heteroscedasticity across Region and Status; variance ratios < 1.5
+- NB GLMM (slide 12) confirms robustness
+
+:::
+
+:::
+
+# 8. Type III F-tests — Reduced Model
+
+```{r}
+#| echo: false
+tbl <- as.data.frame(anova_reduced)
+tbl$Effect <- rownames(tbl)
+tbl <- tbl[, c("Effect", "F value", "NumDF", "DenDF", "Pr(>F)")]
+tbl$`F value` <- round(tbl$`F value`, 3)
+tbl$DenDF    <- round(tbl$DenDF, 2)
+tbl$`Pr(>F)` <- ifelse(
+  tbl$`Pr(>F)` < 0.001,
+  "<0.001",
+  formatC(tbl$`Pr(>F)`, format = "f", digits = 3)
+)
+kable(
+  tbl, row.names = FALSE,
+  col.names = c("Effect", "F", "df1", "df2", "p-value"),
+  align = "lcccc",
+  caption = "Type III F-tests for log(Total Fruits + 1)"
+)
+```
+
+**Significant effects**
+
+- Main: **Nutrients, AMD, Rack, Status**
+- Interactions: **Region × Nutrients**, **Region × Status**
+
+# 9. Variance Components (RQ3)
+
+We partition the random-effect variance from the reduced LMM and test each
+component via LRT.
+
+::: columns
+
+::: column
+
+```{r}
+#| echo: false
+
+vc <- as.data.frame(VarCorr(fit_reduced))
+vc <- vc[, c("grp", "vcov")]
+vc$pct  <- 100 * vc$vcov / sum(vc$vcov)
+vc$vcov <- round(vc$vcov, 3)
+vc$pct  <- round(vc$pct, 1)
+names(vc) <- c("Component", "Variance", "% of total")
+kable(
+  vc, row.names = FALSE,
+  caption = "Variance components (reduced LMM)"
+)
+
+popu_pct <- vc$`% of total`[vc$Component == "popu"]
+```
+
+:::
+
+::: column
+
+```{r}
+#| echo: false
+
+rt <- as.data.frame(lmerTest::ranova(fit_reduced))
+rt$Term <- rownames(rt)
+rt <- rt[, c("Term", "LRT", "Df", "Pr(>Chisq)")]
+rt$LRT <- round(rt$LRT, 2)
+rt$`Pr(>Chisq)` <- ifelse(
+  rt$`Pr(>Chisq)` < 0.001,
+  "<0.001",
+  formatC(rt$`Pr(>Chisq)`, format = "f", digits = 3)
+)
+kable(
+  rt, row.names = FALSE,
+  col.names = c("Term", "LRT", "Df", "p-value"),
+  caption = "LRT for random effects"
+)
+```
+
+:::
+
+:::
+
+Approximately **`r popu_pct`%** of the variance in fruit production is attributable to
+differences between populations. The LRT for maternal seed families is not
+significant, so that level does not explain a meaningful portion of the variability.
+
+# 10. Post-hoc Analysis (EMMs)
+
+Pairwise contrasts on the $\log(\text{Total Fruits}+1)$ scale.
+
+::: columns
+
+::: {.column width="48%"}
+
+\footnotesize
+
+**Nutrients within Region**
+
+```{r}
+#| echo: false
+emm_nutrient <- emmeans(fit_reduced, pairwise ~ nutrient | reg)
+kable(
+  as.data.frame(emm_nutrient$contrasts)[, c("reg", "contrast", "estimate", "SE", "p.value")],
+  digits = 3, row.names = FALSE,
+  col.names = c("Reg", "Contrast", "Est.", "SE", "p")
+)
+```
+
+\vspace{0.6em}
+
+**AMD (main effect)**
+
+```{r}
+#| echo: false
+emm_amd <- emmeans(fit_reduced, pairwise ~ amd)
+kable(
+  as.data.frame(emm_amd$contrasts)[, c("contrast", "estimate", "SE", "p.value")],
+  digits = 3, row.names = FALSE,
+  col.names = c("Contrast", "Est.", "SE", "p")
+)
+```
+
+:::
+
+::: {.column width="52%"}
+
+\footnotesize
+
+**Status within Region**
+
+```{r}
+#| echo: false
+emm_status <- emmeans(fit_reduced, pairwise ~ status | reg)
+kable(
+  as.data.frame(emm_status$contrasts)[, c("reg", "contrast", "estimate", "SE", "p.value")],
+  digits = 3, row.names = FALSE,
+  col.names = c("Reg", "Contrast", "Est.", "SE", "p")
+)
+```
+
+:::
+
+:::
+
+# 11. Interaction Plots
+
+::: columns
+
+::: column
+
+**Region × Nutrients**
+
+```{r, fig.width=4.5, fig.height=3.5, out.width='100%', echo=FALSE}
+Arabidopsis %>%
+  group_by(reg, nutrient) %>%
+  summarise(
+    mean_fruits = mean(logp1_fruits),
+    se = sd(logp1_fruits) / sqrt(n()),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = factor(nutrient, labels = c("Low (1 prill)", "High (8 prills)")),
+             y = mean_fruits,
+             color = reg,
+             group = reg)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_fruits - se, ymax = mean_fruits + se),
+                width = 0.1, linewidth = 0.8) +
+  labs(x = "Nutrient Level",
+       y = "Mean log(Total Fruits + 1)",
+       color = "Region") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        text = element_text(size = 10))
+```
+
+- All regions benefit from high nutrients
+- SP: steepest increase; SW: smallest response
+
+:::
+
+::: column
+
+**Region × Status**
+
+```{r, fig.width=4.5, fig.height=3.5, out.width='100%', echo=FALSE}
+Arabidopsis %>%
+  group_by(reg, status) %>%
+  summarise(
+    mean_fruits = mean(logp1_fruits),
+    se = sd(logp1_fruits) / sqrt(n()),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = status,
+             y = mean_fruits,
+             color = reg,
+             group = reg)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_fruits - se, ymax = mean_fruits + se),
+                width = 0.15, linewidth = 0.8) +
+  labs(x = "Plant Status",
+       y = "Mean log(Total Fruits + 1)",
+       color = "Region") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        text = element_text(size = 10),
+        axis.text.x = element_text(angle = 15, hjust = 1))
+```
+
+- SP: Normal plants outperform Petri.Plate
+- SW: Petri.Plate lowest; NL: less differentiation
+
+:::
+
+:::
+
+# 12. Robustness: Negative Binomial GLMM
+
+::: columns
+
+::: {.column width="45%"}
+
+\small
+
+- Total Fruits is a zero-heavy count — fit a **negative binomial GLMM**
+  on the original scale
+- Same fixed / random effects as the reduced LMM
+- **Result:** conclusions for key fixed effects align with the LMM;
+  LMM retained for interpretability
+
+:::
+
+::: {.column width="55%"}
+
+\footnotesize
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+fit_nb <- glmmTMB(
+  total.fruits ~ reg * nutrient + reg * status + amd + rack +
+    (1 | popu) + (1 | gen),
+  data = Arabidopsis,
+  family = nbinom2
+)
+
+nb_anova <- as.data.frame(car::Anova(fit_nb, type = 3))
+nb_anova$Effect <- rownames(nb_anova)
+rownames(nb_anova) <- NULL
+
+nb_tbl <- nb_anova[, c("Effect", "Chisq", "Df", "Pr(>Chisq)")]
+names(nb_tbl) <- c("Effect", "Chisq", "Df", "p-value")
+nb_tbl$Chisq <- round(nb_tbl$Chisq, 2)
+nb_tbl$`p-value` <- ifelse(
+  nb_tbl$`p-value` < 0.0001,
+  "<0.0001",
+  formatC(nb_tbl$`p-value`, format = "f", digits = 4)
+)
+
+kable(nb_tbl, align = "lccc",
+      caption = "Type III tests: NB GLMM")
+```
+
+:::
+
+:::
+
+# 13. Conclusions
+
+**Summary**
+
+- **Nutrients, AMD, Rack, Status** are significant; high nutrients and absence
+  of AMD → more fruits
+- **Region alone** is not significant as a main effect but matters through
+  **Region × Nutrients** and **Region × Status** interactions
+
+**Answers to research questions**
+
+1. *AMD response across region / nutrients / status:* No significant interactions
+   between AMD and those factors — AMD's effect is consistent across them.
+2. *Other interactions:* **Region × Nutrients** and **Region × Status** are
+   significant — nutrient and transplant-source effects vary by region.
+3. *Hierarchical variance:* $\approx$ `r popu_pct`% of variance attributed
+   to populations; seed-family variance not significant.
+
+# 14. Limitations, Future Work, & References
+
+**Limitations & future work**
+
+- Mild heteroscedasticity across Region / Status (variance ratios < 1.5)
+- Zero-heavy count response → Gaussian LMM on $\log(y+1)$ is approximate;
+  NB GLMM corroborates conclusions but should be the primary model in future work
+
+\vspace{0.5em}
+
+**References**
+
+\footnotesize
+
+- Banta, J. A., Stevens, M. H. H., & Pigliucci, M. (2010). *A comprehensive test
+  of the "limiting resources" framework applied to plant tolerance to apical
+  meristem damage.* Oikos, 119(2), 359–369.
+- Dean, A., Voss, D., & Draguljić, D. (2017). *Design and Analysis of Experiments*
+  (2nd ed.). Springer.
+- STAT 642 Course Handouts 6 (Random Effects), 9 (Mixed Models and Variance
+  Components), 10 (Model Construction and Inference).
+
+# Backup Slides {.center .vcenter}
+
+Reference material for Q\&A
+
+# B1. Full Model: Type III ANOVA
+
+Before reduction, the full LMM includes all treatment interactions up to 3-way
+and all nuisance interactions with Status.
+
+\footnotesize
+
+```{r}
+#| echo: false
+anova_full <- anova(fit_full, type = 3)
+full_tbl <- as.data.frame(anova_full)
+full_tbl$Effect <- rownames(full_tbl)
+full_tbl <- full_tbl[, c("Effect", "F value", "NumDF", "DenDF", "Pr(>F)")]
+full_tbl$`F value` <- round(full_tbl$`F value`, 3)
+full_tbl$DenDF    <- round(full_tbl$DenDF, 2)
+full_tbl$`Pr(>F)` <- ifelse(
+  full_tbl$`Pr(>F)` < 0.001,
+  "<0.001",
+  formatC(full_tbl$`Pr(>F)`, format = "f", digits = 3)
+)
+kable(
+  full_tbl, row.names = FALSE,
+  col.names = c("Effect", "F", "df1", "df2", "p-value"),
+  align = "lcccc",
+  caption = "Type III F-tests for the full model"
+)
+```
+
+# B2. Model Reduction via AIC / BIC
+
+```{r}
+#| echo: false
+#| include: false
+#| cache: true
+
+# Main-effects baseline (all main effects + rack + random effects)
+base <- "logp1_fruits ~ reg + nutrient + amd + status + rack + (1 | popu) + (1 | gen)"
+
+treatment_ints <- list(
+  "Reg x Nut"       = "reg:nutrient",
+  "Reg x AMD"       = "reg:amd",
+  "Nut x AMD"       = "nutrient:amd",
+  "Reg x Nut x AMD" = "reg:nutrient:amd"
+)
+nuisance_ints <- list(
+  "Reg x Stat" = "reg:status",
+  "Nut x Stat" = "nutrient:status",
+  "AMD x Stat" = "amd:status"
+)
+
+# Hierarchy: if 3-way is in, all three 2-way must also be in.
+t_combos <- do.call(expand.grid, replicate(4, c(FALSE, TRUE), simplify = FALSE))
+names(t_combos) <- names(treatment_ints)
+t_valid <- with(t_combos,
+  !`Reg x Nut x AMD` | (`Reg x Nut` & `Reg x AMD` & `Nut x AMD`)
+)
+t_combos <- t_combos[t_valid, , drop = FALSE]
+
+n_combos <- do.call(expand.grid, replicate(3, c(FALSE, TRUE), simplify = FALSE))
+names(n_combos) <- names(nuisance_ints)
+
+models <- list()
+for (i in seq_len(nrow(t_combos))) {
+  for (j in seq_len(nrow(n_combos))) {
+    t_in <- names(treatment_ints)[as.logical(t_combos[i, ])]
+    n_in <- names(nuisance_ints)[as.logical(n_combos[j, ])]
+    included <- c(t_in, n_in)
+    if (length(included) == 0) {
+      label <- "Main effects only"
+      form <- base
+    } else {
+      label <- paste(included, collapse = " + ")
+      terms <- c(treatment_ints[t_in], nuisance_ints[n_in])
+      form <- paste(base, paste(terms, collapse = " + "), sep = " + ")
+    }
+    models[[label]] <- lmer(as.formula(form), data = Arabidopsis, REML = FALSE)
+  }
+}
+
+aic_bic <- data.frame(
+  Model = names(models),
+  AIC   = sapply(models, AIC),
+  BIC   = sapply(models, BIC)
+)
+aic_bic$dAIC <- aic_bic$AIC - min(aic_bic$AIC)
+aic_bic$dBIC <- aic_bic$BIC - min(aic_bic$BIC)
+aic_bic <- aic_bic[order(aic_bic$AIC), ]
+```
+
+::: columns
+
+::: {.column width="42%"}
+
+\small
+
+- Enumerate all subsets of 7 candidate interactions
+- **Hierarchy enforced**: if 3-way is in, all three 2-way interactions must also be in
+- Main effects always retained; Rack additive
+- 72 models (9 treatment × 8 nuisance); fit with ML
+- AIC-preferred model adds **Nutrients × AMD** vs. the LRT-reduced model;
+  not significant by LRT
+- Retain LRT-reduced model for interpretability
+
+:::
+
+::: {.column width="58%"}
+
+\footnotesize
+
+```{r}
+#| echo: false
+kable(
+  head(aic_bic, 10), digits = 2, row.names = FALSE,
+  caption = "Top 10 of 72 models, ranked by AIC"
+)
+```
+
+:::
+
+:::
+
+# B3. Scale-Location Plot
+
+- Slight increase in variance at moderate fitted values
+- No severe heteroscedasticity pattern
+
+```{r, fig.width=5, fig.height=2.8, out.width='80%', fig.align='center', echo=FALSE}
+scale_loc_plot <- function(m) {
+  plot(m, sqrt(abs(resid(.))) ~ fitted(.),
+       type = c("p", "smooth"),
+       xlab = "Fitted",
+       ylab = "Sqrt(|Residuals|)",
+       main = "")
+}
+scale_loc_plot(fit_reduced)
+```
+
+# B4. Normality Detail: Shapiro-Wilk
+
+::: columns
+
+::: column
+
+\footnotesize
+
+```{r, echo=FALSE}
+resids <- resid(fit_reduced, scaled = TRUE)
+shapiro_test <- shapiro.test(resids)
+shapiro_test
+```
+
+- With $n = 625$, Shapiro-Wilk is sensitive to tiny departures from normality.
+- Q-Q plot is the primary diagnostic; residuals approximately normal.
+- The mild non-normality is attributed to zero-inflation and is addressed
+  indirectly by the NB GLMM robustness check.
+
+:::
+
+::: column
+
+```{r, fig.width=4.5, fig.height=3, out.width='100%', echo=FALSE}
+lattice::qqmath(fit_reduced, main = "Normal Q-Q plot")
+```
+
+:::
+
+:::
+
+# B5. Variance Diagnostics Detail
+
+::: columns
+
+::: column
+
+**Levene (Brown-Forsythe) test on residuals**
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+lev_results <- data.frame(
+  Factor = c("Region", "Nutrients", "Status", "AMD"),
+  p_value = c(
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$reg)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$nutrient)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$status)[1,3],
+    leveneTest(resid(fit_reduced) ~ Arabidopsis$amd)[1,3]
+  )
+)
+lev_results$p_value <- signif(lev_results$p_value, 3)
+kable(lev_results, align = "lc")
+```
+
+**Variance ratios**
+
+```{r, echo=FALSE}
+var_reg    <- tapply(resid(fit_reduced), Arabidopsis$reg, var)
+var_status <- tapply(resid(fit_reduced), Arabidopsis$status, var)
+ratio_reg    <- max(var_reg) / min(var_reg)
+ratio_status <- max(var_status) / min(var_status)
+
+data.frame(
+  Group = c("Region", "Status"),
+  Variance_Ratio = round(c(ratio_reg, ratio_status), 2)
+) %>% kable(align = "lc")
+```
+
+:::
+
+::: column
+
+**Interpretation**
+
+- Levene detects some heteroscedasticity across Region and Status
+- Variance ratios < 1.5 → not severe
+- Large $n$ makes the test sensitive to small differences
+- Log transformation addresses skewness and zeros
+- NB GLMM confirms robustness of conclusions
+
+:::
+
+:::
+
+# B6. Response Distribution (Zoomed)
+
+```{r, fig.width=6, fig.height=3.2, out.width='70%', fig.align='center', echo=FALSE}
+ggplot(Arabidopsis %>% filter(total.fruits < 10), aes(x = total.fruits)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Total Fruits (zoomed to < 10)",
+       x = "Total Fruits", y = "Count") +
+  theme_minimal()
+```
+
+- Heavy mass at zero motivates the $\log(y+1)$ transformation and the NB GLMM
+  robustness check.
+
+# B7. Sampling Hierarchy Detail
+
+::: columns
+
+::: column
+
+**Hierarchy**
+
+- 3 regions: NL, SP, SW
+- 9 populations nested in Region (4 SP, 2 NL, 3 SW)
+- 24 maternal seed families nested in Population
+
+**Procedure**
+
+- Seeds germinated in petri dishes, then potted
+- Failed germinations replaced with same-family seedlings
+- Clipping (AMD) applied at bolting stage
+
+:::
+
+::: column
+
+**Random-effect specification**
+
+- `(1 | popu)` — Population random intercept;
+  levels uniquely labeled so nesting in Region is implicit
+- `(1 | gen)` — Seed family random intercept;
+  levels uniquely labeled so nesting in Population is implicit
+
+**Scale**
+
+- $n = 625$ plants
+- $\approx$ 6.5 plants per seed-family $\times$ treatment cell
+
+:::
+
+:::
