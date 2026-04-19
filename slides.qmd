@@ -51,8 +51,8 @@ library(emmeans)
 
 # 1.1 Introduction & Data Description
 
-**Source:** Our source dataset is called **`Arabadopsis`**, and was generated
-from a **DoE experiment on Arabadopsis thaliana plants** performed by **the Center 
+**Source:** Our source dataset is called **`Arabidopsis`**, and was generated
+from a **DoE experiment on Arabidopsis thaliana plants** performed by **the Center 
 for Genomics and Systems Biology at New York University**, and the results 
 of which 
 were published in **Banta JA, Stevens MHH, Pigliucci M (2010). “A comprehensive test
@@ -60,7 +60,7 @@ of the ’limiting resources’ framework applied to plant tolerance to apical
 meristem damage.” Oikos, 119(2), 359-369. doi:10.1111/j.16000706.2009.17726.x.**
 
 Banta et al investigated how different resources **(nutrients, water, and light)**
-affect the ability of Arabadopsis plants from 
+affect the ability of Arabidopsis plants from 
 three different regions to tolerate damage to their **apical 
 meristem damage (AMD)** in order to test the "limiting resources" framework. The "limiting resources"  framework was an accepted model in the field, describing 
 the growth response of plants to AMD. The dataset contains measurements of plant growth and reproduction under various treatment conditions.
@@ -82,8 +82,7 @@ the growth response of plants to AMD. The dataset contains measurements of plant
 
 Our research questions in analyzing this dataset are as follows:
 
-1. How do the growth and reproductive responses of Arabidopsis thaliana to apical meristem damage (AMD) 
-vary across different regions, nutrient levels, and transplant sources?
+1. How do the reproductive responses of Arabidopsis thaliana to apical meristem damage (AMD) vary across different regions, nutrient levels, and transplant sources?
 
 2. Are there significant interactions between region, nutrient levels, and transplant sources in 
 determining the plant's response to AMD?
@@ -111,7 +110,7 @@ populations and maternal seed families within regions?
 
 - **Hierarchical sampling structure:**
   - Region
-  - Population nested within Region (four populations from NS, two from NL, and three from SS)
+  - Population nested within Region (four populations from SP, two from NL, and three from SW)
   - Genotype (maternal seed family) nested within Population
 
 - **Experimental factors of interest:**
@@ -180,7 +179,7 @@ with hierarchical nesting.
 - Populations are grouped within **regions**
 
 We fit a linear mixed-effects model (LMM) with total fruits
-(-transformed) as the response.
+(log-transformed) as the response.
 
 $$
 \begin{aligned}
@@ -333,13 +332,13 @@ knitr::kable(
 
 **Backward elimination of non-significant terms** (LRT, $\alpha = 0.05$)
 
-- Test **Nutrients × Status**
-  - LRT p-value = 0.64 → not significant  
-  → remove interaction  
+- Test **Nutrients × Status** → not significant, drop
+- Test **AMD × Status** → not significant, drop
+- Test **Region × Nutrients × AMD** (3-way) → not significant, drop
+- Test **Region × AMD** → not significant, drop
+- Test **Nutrients × AMD** → not significant, drop
 
-- Test **Region × Status**
-  - LRT not significant  
-  → remove interaction  
+Region × Status and Region × Nutrients remain in the model.
 
 **Final Reduced Model**
 
@@ -374,7 +373,7 @@ fit_no_amd_status <- lmer(
 
 # LRT comparing reduced model with amd:status eliminated
 fit_no_amd_status_ml <- update(fit_no_amd_status, REML = FALSE)
-#cat("\n=== LRT: drop Region x Status ===\n")
+#cat("\n=== LRT: drop AMD x Status ===\n")
 lrt2 <- anova(fit_no_nut_status_ml, fit_no_amd_status_ml)
 
 # anova(fit_no_amd_status, type = 3)
@@ -589,7 +588,7 @@ knitr::kable(head(aic_bic, 15), digits = 2, row.names = FALSE,
 - **Total Fruits** is a count variable with many zeros → fit a **negative binomial GLMM** on the original response scale
 
 - Same fixed/random effects as the reduced LMM:
-  - Main effects: Region, Nutrients, Status, Rack
+  - Main effects: Region, Nutrients, AMD, Status, Rack
   - Interactions: Region × Nutrients, Region × Status
   - Random effects: Population, Genotype
 
@@ -639,6 +638,64 @@ kable(nb_tbl, align = "lccc", caption = "Type III tests for negative binomial GL
 :::
 
 :::
+
+# 3.5 Variance Components
+
+Research question 3 asks how much variation in plant response is attributable
+to differences between populations and maternal seed families within regions.
+We answer it by partitioning the random-effect variance from the reduced LMM
+and testing each component via LRT.
+
+::: columns
+
+::: column
+
+```{r}
+#| echo: false
+
+vc <- as.data.frame(VarCorr(fit_reduced))
+vc <- vc[, c("grp", "vcov")]
+vc$pct  <- 100 * vc$vcov / sum(vc$vcov)
+vc$vcov <- round(vc$vcov, 3)
+vc$pct  <- round(vc$pct, 1)
+names(vc) <- c("Component", "Variance", "% of total")
+kable(
+  vc, row.names = FALSE,
+  caption = "Variance components (reduced LMM)"
+)
+```
+
+:::
+
+::: column
+
+```{r}
+#| echo: false
+
+rt <- as.data.frame(lmerTest::ranova(fit_reduced))
+rt$Term <- rownames(rt)
+rt <- rt[, c("Term", "LRT", "Df", "Pr(>Chisq)")]
+rt$LRT <- round(rt$LRT, 2)
+rt$`Pr(>Chisq)` <- ifelse(
+  rt$`Pr(>Chisq)` < 0.001,
+  "<0.001",
+  formatC(rt$`Pr(>Chisq)`, format = "f", digits = 3)
+)
+kable(
+  rt, row.names = FALSE,
+  col.names = c("Term", "LRT", "Df", "p-value"),
+  caption = "LRT for random effects"
+)
+```
+
+:::
+
+:::
+
+Based on the variance components and LRT results, we attribute approximately 16% of the 
+variance in fruit production to differences between populations. The LRT for the 
+variance contributed by maternal seed families is not significant, suggesting that this 
+level of grouping does not explain a significant portion of the variability in the response.
 
 # 4.1 Assumption Checks
 
@@ -733,7 +790,7 @@ scale_loc_plot(fit_reduced)
 
 ```
 
-# 4.5 Conlusion
+# 4.5 Conclusion
 
 ::: columns
 
@@ -796,58 +853,106 @@ data.frame(
 
 # 4.6 Hypothesis Tests — Type III F-tests
 
-| Effect | $F$ | df$_1$ | df$_2$ | $p$-value |
-|--------|-----|--------|--------|-----------|
-| Region | 0.3642 | 2 | 8.73 | 0.705 |
-| Nutrients | 149.8963 | 1 | 601.75 | <0.001 |
-| Status | 2.0602 | 2 | 606.74 | 0.128 |
-| AMD | 6.9777 | 1 | 598.06 | 0.008 |
-| Rack | 71.2301 | 1 | 600.21 | <0.001 |
-| Region $\times$ Nutrients | 8.7988 | 2 | 600.77 | <0.001 |
-| Region $\times$ Status | 2.5587 | 4 | 605.91 | 0.038 |
+```{r}
+#| echo: false
+anova_reduced <- anova(fit_reduced, type = 3)
+tbl <- as.data.frame(anova_reduced)
+tbl$Effect <- rownames(tbl)
+tbl <- tbl[, c("Effect", "F value", "NumDF", "DenDF", "Pr(>F)")]
+tbl$`F value` <- round(tbl$`F value`, 3)
+tbl$DenDF    <- round(tbl$DenDF, 2)
+tbl$`Pr(>F)` <- ifelse(
+  tbl$`Pr(>F)` < 0.001,
+  "<0.001",
+  formatC(tbl$`Pr(>F)`, format = "f", digits = 3)
+)
+kable(
+  tbl, row.names = FALSE,
+  col.names = c("Effect", "F", "df1", "df2", "p-value"),
+  align = "lcccc",
+  caption = "Type III F-tests for log(Total Fruits + 1)"
+)
+```
 
-: Type III F-test results for $\log(\text{Total Fruits} + 1)$
+**Significant Effectss**
 
-**Significant Differences**
-
-- Significant: **Nutrients, AMD, Rack**  
+- Significant: **Nutrients, AMD, Rack, and Status**  
 - Significant interactions:  
   - Region × Nutrients  
   - Region × Status
   
 # 4.7 Post-hoc Analysis (EMMs)
 
-- For significant effects, examine **estimated marginal means**
+For significant effects, examine **estimated marginal means** on the
+log(Total Fruits + 1) scale.
+
+::: columns
+
+::: column
+
+**Nutrients within Region**
 
 ```{r}
 #| echo: false
-
 emm_nutrient <- emmeans(fit_reduced, pairwise ~ nutrient | reg)
-emm_status   <- emmeans(fit_reduced, pairwise ~ status | reg)
-emm_amd      <- emmeans(fit_reduced, pairwise ~ amd)
-
-summary(emm_nutrient$contrasts)
+kable(
+  as.data.frame(emm_nutrient$contrasts)[, c("reg", "contrast", "estimate", "SE", "p.value")],
+  digits = 3, row.names = FALSE
+)
 ```
+
+**AMD (main effect)**
+
+```{r}
+#| echo: false
+emm_amd <- emmeans(fit_reduced, pairwise ~ amd)
+kable(
+  as.data.frame(emm_amd$contrasts)[, c("contrast", "estimate", "SE", "p.value")],
+  digits = 3, row.names = FALSE
+)
+```
+
+:::
+
+::: column
+
+**Status within Region**
+
+```{r}
+#| echo: false
+emm_status <- emmeans(fit_reduced, pairwise ~ status | reg)
+kable(
+  as.data.frame(emm_status$contrasts)[, c("reg", "contrast", "estimate", "SE", "p.value")],
+  digits = 3, row.names = FALSE
+)
+```
+
+:::
+
+:::
 
 # 5.1 Summary of Findings
 
-- **Nutrient availability was the strongest fixed effect** in the model. Plants grown under high nutrients produced significantly more fruits than those under low nutrients.
+- **Nutrients, AMD, Rack, and Status** were all found to have significant impacts on fruit 
+production. Plants grown in the presence of high nutrients and in the absence of AMD produced significantly more fruits than those under low nutrients and exposed to AMD.
 
-- **Apical meristem damage (AMD) had a significant negative effect** on reproduction. Unclipped plants produced more fruits on average than clipped plants.
+- **Region alone was not significant**, but its role became important through interactions 
+with other predictors (Nutrients and Status).
 
-- **Rack was also a significant predictor**, indicating that growth conditions associated with rack placement contributed meaningfully to fruit production.
+- Overall, fruit production in *Arabidopsis* was shaped by both **experimental treatments** 
+and **hierarchical biological differences** among populations and maternal seed families.
 
-- **Region alone was not significant**, but its role became important through interactions with other predictors.
+# 5.2 Research Question Conclusions
 
-# 5.2 Summary of Findings
+1. How do the reproductive responses of Arabidopsis thaliana to apical meristem damage (AMD) vary across different regions, nutrient levels, and transplant sources?
 
-- The **Region × Nutrient interaction was significant**, showing that the effect of nutrient availability differed across regions.
+    - No significant interactions between AMD and Region, Nutrients, or Status were observed, suggesting the effect of AMD on fruit production was consistent across these factors.
 
-- The **Region × Status interaction was also significant**, indicating that transplant or source effects were not consistent across regions.
+2. Are there significant interactions between region, nutrient levels, and transplant sources in determining the a plant's fruit production?
 
-- The random effects for **population** and **genotype** captured additional biological variability, supporting the use of a mixed-effects model.
+    - Yes, significant interactions were found between Region × Nutrients and Region × Status, indicating that the effects of nutrient availability and transplant source varied across regions.
 
-- Overall, fruit production in *Arabidopsis* was shaped by both **experimental treatments** and **hierarchical biological differences** among populations and maternal seed families.
+3. How much of the variability in plant response to AMD can be attributed to differences between populations and maternal seed families within regions?
 
 # 5.3 Limitations \& Future Work
 
