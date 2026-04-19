@@ -467,29 +467,14 @@ kable(
 
 # 3.3 Model Reduction via AIC / BIC
 
-***Alternative model reduction via AIC / BIC***
-
-- Compare all subsets of interaction terms using AIC/BIC
-- 7 candidate interactions: 4 treatment (Reg × Nut, Reg × AMD,
-  Nut × AMD, Reg × Nut × AMD) and 3 nuisance (Reg × Status,
-  Nut × Status, AMD × Status)
-- Hierarchy enforced: if the 3-way is included, all three
-  corresponding 2-way interactions must also be included
-- All main effects retained; Rack included as additive blocking factor
-- 72 candidate models (9 treatment-interaction configurations × 8
-  nuisance-interaction configurations); fit with ML
-- AIC preferred model includes one additional term (Nutrients x AMD) compared to the LRT-reduced model, but this term is not significant in the LRT framework and does not change conclusions about key effects. We retain the LRT-reduced model for interpretability.
-
 ```{r}
 #| echo: false
+#| include: false
 #| cache: true
-
 
 # Main-effects baseline (all main effects + rack + random effects)
 base <- "logp1_fruits ~ reg + nutrient + amd + status + rack + (1 | popu) + (1 | gen)"
 
-# Candidate interactions, split into treatment (hierarchy-constrained)
-# and nuisance (freely combinable)
 treatment_ints <- list(
   "Reg x Nut"       = "reg:nutrient",
   "Reg x AMD"       = "reg:amd",
@@ -502,8 +487,7 @@ nuisance_ints <- list(
   "AMD x Stat" = "amd:status"
 )
 
-# Enumerate all combinations, filter to hierarchy-respecting subsets.
-# If the 3-way is in, all three corresponding 2-way must also be in.
+# Hierarchy: if 3-way is in, all three 2-way must also be in.
 t_combos <- do.call(expand.grid, replicate(4, c(FALSE, TRUE), simplify = FALSE))
 names(t_combos) <- names(treatment_ints)
 t_valid <- with(t_combos,
@@ -514,7 +498,6 @@ t_combos <- t_combos[t_valid, , drop = FALSE]
 n_combos <- do.call(expand.grid, replicate(3, c(FALSE, TRUE), simplify = FALSE))
 names(n_combos) <- names(nuisance_ints)
 
-# Cross treatment x nuisance configurations (9 x 8 = 72)
 models <- list()
 for (i in seq_len(nrow(t_combos))) {
   for (j in seq_len(nrow(n_combos))) {
@@ -538,49 +521,66 @@ aic_bic <- data.frame(
   AIC   = sapply(models, AIC),
   BIC   = sapply(models, BIC)
 )
-
 aic_bic$dAIC <- aic_bic$AIC - min(aic_bic$AIC)
 aic_bic$dBIC <- aic_bic$BIC - min(aic_bic$BIC)
 aic_bic <- aic_bic[order(aic_bic$AIC), ]
-
-# Show top 15 models by AIC (full table would be 72 rows)
-knitr::kable(head(aic_bic, 15), digits = 2, row.names = FALSE,
-             caption = "Top 15 of 72 candidate models, ranked by AIC")
 ```
+
+::: columns
+
+::: {.column width="42%"}
+
+\small
+
+- Enumerate all subsets of 7 candidate interactions
+- **Hierarchy enforced**: if 3-way is in, all three 2-way interactions must also be in
+- Main effects always retained; Rack additive
+- 72 models (9 treatment × 8 nuisance); fit with ML
+- AIC-preferred model adds **Nutrients × AMD** vs. the LRT-reduced model; not significant by LRT
+- Retain LRT-reduced model for interpretability
+
+:::
+
+::: {.column width="58%"}
+
+\footnotesize
+
+```{r}
+#| echo: false
+knitr::kable(
+  head(aic_bic, 10), digits = 2, row.names = FALSE,
+  caption = "Top 10 of 72 models, ranked by AIC"
+)
+```
+
+:::
+
+:::
 
 # 3.4 Alternative GLMM with Negative Binomial Family
 
 ::: columns
 
-::: column
+::: {.column width="45%"}
 
-- **Total Fruits** is a count variable with many zeros → fit a **negative binomial GLMM** on the original response scale
+\small
 
-- Same fixed/random effects as the reduced LMM:
-  - Main effects: Region, Nutrients, AMD, Status, Rack
-  - Interactions: Region × Nutrients, Region × Status
-  - Random effects: Population, Genotype
-
-- Goal:
-  - assess whether a count-based model provides a better fit
-  - compare conclusions with the Gaussian LMM
-
-**Main Result**
-
-- The negative binomial GLMM gave similar conclusions for key fixed effects  
-- We retained the LMM as the primary model for interpretability
+- Total Fruits is a zero-heavy count → fit a **negative binomial GLMM** on the original scale
+- Same fixed/random effects as the reduced LMM
+- Goal: check whether a count model changes conclusions
+- **Result:** similar conclusions for key fixed effects; LMM retained for interpretability
 
 :::
 
-::: column
+::: {.column width="55%"}
+
+\footnotesize
 
 ```{r}
 #| echo: false
 #| warning: false
 #| message: false
 
-# Fit the same reduced structure as fit_reduced, but with a negative
-# binomial response on the original count scale (no log1p transform).
 fit_nb <- glmmTMB(
   total.fruits ~ reg * nutrient + reg * status + amd + rack +
     (1 | popu) + (1 | gen),
@@ -601,7 +601,8 @@ nb_tbl$`p-value` <- ifelse(
   formatC(nb_tbl$`p-value`, format = "f", digits = 4)
 )
 
-kable(nb_tbl, align = "lccc", caption = "Type III tests for negative binomial GLMM")
+kable(nb_tbl, align = "lccc",
+      caption = "Type III tests: NB GLMM")
 ```
 
 :::
@@ -852,12 +853,13 @@ kable(
   
 # 4.7 Post-hoc Analysis (EMMs)
 
-For significant effects, examine **estimated marginal means** on the
-log(Total Fruits + 1) scale.
+Pairwise contrasts on the log(Total Fruits + 1) scale for significant effects.
 
 ::: columns
 
-::: column
+::: {.column width="48%"}
+
+\footnotesize
 
 **Nutrients within Region**
 
@@ -866,9 +868,12 @@ log(Total Fruits + 1) scale.
 emm_nutrient <- emmeans(fit_reduced, pairwise ~ nutrient | reg)
 kable(
   as.data.frame(emm_nutrient$contrasts)[, c("reg", "contrast", "estimate", "SE", "p.value")],
-  digits = 3, row.names = FALSE
+  digits = 3, row.names = FALSE,
+  col.names = c("Reg", "Contrast", "Est.", "SE", "p")
 )
 ```
+
+\vspace{0.6em}
 
 **AMD (main effect)**
 
@@ -877,13 +882,16 @@ kable(
 emm_amd <- emmeans(fit_reduced, pairwise ~ amd)
 kable(
   as.data.frame(emm_amd$contrasts)[, c("contrast", "estimate", "SE", "p.value")],
-  digits = 3, row.names = FALSE
+  digits = 3, row.names = FALSE,
+  col.names = c("Contrast", "Est.", "SE", "p")
 )
 ```
 
 :::
 
-::: column
+::: {.column width="52%"}
+
+\footnotesize
 
 **Status within Region**
 
@@ -892,7 +900,8 @@ kable(
 emm_status <- emmeans(fit_reduced, pairwise ~ status | reg)
 kable(
   as.data.frame(emm_status$contrasts)[, c("reg", "contrast", "estimate", "SE", "p.value")],
-  digits = 3, row.names = FALSE
+  digits = 3, row.names = FALSE,
+  col.names = c("Reg", "Contrast", "Est.", "SE", "p")
 )
 ```
 
