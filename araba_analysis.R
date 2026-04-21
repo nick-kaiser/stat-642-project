@@ -3,15 +3,13 @@
 # STAT 642 - Spring 2026 - Team 11
 #
 # R-script counterpart to slides_condensed.qmd. Contains all code and produces
-# all outputs (tables, plots, tests) from the slide deck, minus the prose.
+# all outputs (tables, plots, tests) from the slide deck, minus the text.
 # =============================================================================
 
 
 # -----------------------------------------------------------------------------
 # Setup: libraries, data, and global options
 # -----------------------------------------------------------------------------
-
-source('R/load_arabidopsis.R')
 
 library(dplyr)
 library(ggplot2)
@@ -24,6 +22,8 @@ library(knitr)
 library(glmmTMB)
 library(DHARMa)
 library(emmeans)
+
+data("Arabidopsis", package = "lme4")
 
 # Sum-to-zero contrasts so Type III ANOVA main-effect tests are
 # averaged over factor levels rather than evaluated at a reference level.

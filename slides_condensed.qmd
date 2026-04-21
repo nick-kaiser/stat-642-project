@@ -20,8 +20,6 @@ format:
 
 ```{r}
 
-source('R/load_arabidopsis.R')
-
 library(dplyr)
 library(ggplot2)
 library(MASS)
@@ -33,6 +31,8 @@ library(knitr)
 library(glmmTMB)
 library(DHARMa)
 library(emmeans)
+
+data("Arabidopsis", package = "lme4")
 
 # Sum-to-zero contrasts so Type III ANOVA main-effect tests are
 # averaged over factor levels rather than evaluated at a reference level.
